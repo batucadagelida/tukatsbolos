@@ -1,0 +1,634 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tukats - Gestió de Batucada</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & Babel Standalone -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; background-color: #DCF23A; margin: 0; padding: 0; }
+        
+        .custom-scrollbar {
+            -webkit-overflow-scrolling: touch;
+        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; height: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
+        
+        .loading-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .cursor-grab { user-select: none; }
+        
+        .person-selected {
+            outline: 3px solid #16a34a;
+            outline-offset: 2px;
+            background-color: white !important;
+            z-index: 10;
+        }
+
+        html, body, #root {
+            height: 100dvh; /* Utilitzem dvh per a mòbils */
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
+        .overflow-y-auto, .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <!-- Inicialización de Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection, deleteDoc, addDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+        const productionConfig = {
+            apiKey: "AIzaSyAbqfNeh1p-jGp0vGl6K85N-SJSi7DPwn0",
+            authDomain: "tukatsbolos.firebaseapp.com",
+            projectId: "tukatsbolos",
+            storageBucket: "tukatsbolos.firebasestorage.app",
+            messagingSenderId: "74618830888",
+            appId: "1:74618830888:web:a8e08918d802ab1498751d"
+        };
+
+        window.PROD_APP_ID = "tukats-batucada-v1"; 
+
+        let firebaseConfig = productionConfig;
+        
+        if ((!firebaseConfig.apiKey || firebaseConfig.apiKey.includes("AQUI")) && typeof window.__firebase_config !== 'undefined' && window.__firebase_config) {
+            try {
+                firebaseConfig = JSON.parse(window.__firebase_config);
+                window.PROD_APP_ID = window.__app_id || window.PROD_APP_ID;
+            } catch (e) { console.warn("Error config Canvas"); }
+        }
+
+        if (firebaseConfig.apiKey && !firebaseConfig.apiKey.includes("AQUI")) {
+            const app = initializeApp(firebaseConfig);
+            window.FirebaseApp = {
+                auth: getAuth(app),
+                db: getFirestore(app),
+                signInAnonymously,
+                signInWithCustomToken,
+                onAuthStateChanged,
+                doc,
+                setDoc,
+                onSnapshot,
+                updateDoc,
+                collection,
+                deleteDoc,
+                addDoc,
+                initialized: true
+            };
+        } else {
+            window.FirebaseApp = { initialized: false };
+        }
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const Icon = ({ name, size = 16, className = "" }) => {
+            const icons = {
+                plus: <path d="M12 5v14M5 12h14" />,
+                'log-out': <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />,
+                calendar: <><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><path d="M16 2v4M8 2v4M3 10h18"/></>,
+                'map-pin': <><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></>,
+                users: <><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>,
+                'chevron-right': <path d="m9 18 6-6-6-6" />,
+                'edit-3': <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" />,
+                'trash-2': <><path d="M3 6h18M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></>,
+                clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+                hourglass: <><path d="M5 2h14M5 22h14M15 2v5l-3 3-3-3V2M9 22v-5l3-3 3 3v5"/></>,
+                key: <><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3-3.5 3.5Z"/></>
+            };
+
+            return (
+                <svg viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+                    {icons[name] || null}
+                </svg>
+            );
+        };
+
+        const ALL_PEOPLE = [
+            "Jesus", "Merche", "Txis", "Josep", "Nacho", "Mon", "Claudia", "Toñi", 
+            "Alba", "Viñet", "Evelyn", "Dahna", "DavidB", "David", "Xavi", "Johny", 
+            "Valentin", "JosepA", "Merce", "Lorena", "Bruna", "Emily", "Valentina", 
+            "Carmen", "Maria", "Marta", "Paula", "Ona", "Aina", "Lluis", "Ernest"
+        ].sort();
+
+        const INSTRUMENTS = ["1a", "2a", "3a", "Caixa", "Timba", "Xapa", "Tamborin", "Repe"];
+
+        function App() {
+            const [fb, setFb] = useState(null);
+            const [user, setUser] = useState(null);
+            const [isLoggedIn, setIsLoggedIn] = useState(false);
+            const [isAdminMode, setIsAdminMode] = useState(false);
+            const [isAdminAuth, setIsAdminAuth] = useState(false);
+            const [passwordInput, setPasswordInput] = useState("");
+            const [errorMsg, setErrorMsg] = useState("");
+            const [bolos, setBolos] = useState([]);
+            const [selectedBolo, setSelectedBolo] = useState(null);
+            const [isLoadingBoloData, setIsLoadingBoloData] = useState(false);
+            const [attendance, setAttendance] = useState({});
+            const [assignments, setAssignments] = useState({});
+            const [settings, setSettings] = useState({ userPass: "TUKATS", adminPass: "ADMIN" });
+            const [showBoloModal, setShowBoloModal] = useState(false);
+            const [editingBoloId, setEditingBoloId] = useState(null);
+            const [boloFormData, setBoloFormData] = useState({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "" });
+            const [personToMove, setPersonToMove] = useState(null);
+            const [isChangingPass, setIsChangingPass] = useState(null); 
+            const [newPassInput, setNewPassInput] = useState("");
+
+            useEffect(() => {
+                const interval = setInterval(() => {
+                    if (window.FirebaseApp) {
+                        setFb(window.FirebaseApp);
+                        clearInterval(interval);
+                    }
+                }, 100);
+                return () => clearInterval(interval);
+            }, []);
+
+            useEffect(() => {
+                if (!fb || !fb.initialized) return;
+                const initAuth = async () => {
+                    try {
+                        if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                            try {
+                                await fb.signInWithCustomToken(fb.auth, window.__initial_auth_token);
+                            } catch (tokenErr) {
+                                await fb.signInAnonymously(fb.auth);
+                            }
+                        } else {
+                            await fb.signInAnonymously(fb.auth);
+                        }
+                    } catch (e) { console.error("Auth Error:", e); }
+                };
+                initAuth();
+                const unsubscribe = fb.onAuthStateChanged(fb.auth, (u) => { setUser(u); });
+                return () => unsubscribe();
+            }, [fb]);
+
+            useEffect(() => {
+                if (!user || !fb || !fb.initialized) return;
+                const appId = window.PROD_APP_ID;
+                const settingsDoc = fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'app_settings', 'config');
+                const unsubSettings = fb.onSnapshot(settingsDoc, (snap) => {
+                    if (snap.exists()) setSettings(snap.data());
+                    else fb.setDoc(settingsDoc, { userPass: "TUKATS", adminPass: "ADMIN" });
+                }, (err) => console.error("Settings listener error:", err));
+
+                const bolosColl = fb.collection(fb.db, 'artifacts', appId, 'public', 'data', 'bolos');
+                const unsubBolos = fb.onSnapshot(bolosColl, (snap) => {
+                    setBolos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+                }, (err) => console.error("Bolos listener error:", err));
+
+                return () => { unsubSettings(); unsubBolos(); };
+            }, [user, fb]);
+
+            useEffect(() => {
+                if (!user || !selectedBolo || !fb || !fb.initialized) {
+                    setIsLoadingBoloData(false);
+                    return;
+                }
+                setIsLoadingBoloData(true);
+                const appId = window.PROD_APP_ID;
+                const stateDoc = fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', selectedBolo.id);
+                const unsub = fb.onSnapshot(stateDoc, (snap) => {
+                    if (snap.exists()) {
+                        const data = snap.data();
+                        setAttendance(data.attendance || {});
+                        setAssignments(data.assignments || {});
+                        setIsLoadingBoloData(false);
+                    } else {
+                        const init = { attendance: {}, assignments: {} };
+                        ALL_PEOPLE.forEach(p => { init.attendance[p] = 'black'; init.assignments[p] = null; });
+                        fb.setDoc(stateDoc, init).then(() => setIsLoadingBoloData(false));
+                    }
+                }, (err) => {
+                    console.error("Bolo Data Error:", err);
+                    setIsLoadingBoloData(false);
+                });
+                return () => unsub();
+            }, [user, selectedBolo, fb]);
+
+            const esPasado = (fechaStr) => {
+                if (!fechaStr) return false;
+                const partes = fechaStr.split('-');
+                if (partes.length !== 3) return false;
+                const fechaBolo = new Date(partes[0], partes[1] - 1, partes[2]);
+                const hoy = new Date();
+                hoy.setHours(0, 0, 0, 0);
+                return fechaBolo < hoy;
+            };
+
+            const handleLogin = (e) => {
+                e.preventDefault();
+                setErrorMsg("");
+                const target = isAdminMode ? settings.adminPass : settings.userPass;
+                if (passwordInput === target) {
+                    setIsLoggedIn(true);
+                    setIsAdminAuth(isAdminMode);
+                    setPasswordInput("");
+                } else {
+                    setErrorMsg(isAdminMode ? "Contrasenya Admin incorrecta" : "Contrasenya incorrecta");
+                }
+            };
+
+            const syncState = async (newAtt, newAss) => {
+                if (!user || !fb || !fb.initialized || !selectedBolo) return;
+                const appId = window.PROD_APP_ID;
+                const stateDoc = fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', selectedBolo.id);
+                const boloDoc = fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id);
+                
+                const att = newAtt || attendance;
+                const ass = newAss || assignments;
+                
+                const confirmed = Object.values(ass).filter(v => v !== null).length;
+                const declined = Object.values(att).filter(v => v === 'red').length;
+                const pending = ALL_PEOPLE.length - confirmed - declined;
+
+                try {
+                    await fb.updateDoc(stateDoc, { attendance: att, assignments: ass });
+                    await fb.updateDoc(boloDoc, { 
+                        memberCount: confirmed,
+                        pendingCount: pending,
+                        declinedCount: declined
+                    });
+                } catch (e) { console.error("Sync error:", e); }
+            };
+
+            const movePerson = (person, inst) => {
+                const nextAss = { ...assignments, [person]: inst };
+                const nextAtt = { ...attendance, [person]: inst ? 'green' : 'black' };
+                setAssignments(nextAss);
+                setAttendance(nextAtt);
+                syncState(nextAtt, nextAss);
+                setPersonToMove(null);
+            };
+
+            const saveBolo = async () => {
+                if (!user || !boloFormData.nombre || !fb || !fb.initialized) return;
+                const appId = window.PROD_APP_ID;
+                try {
+                    if (editingBoloId) {
+                        await fb.updateDoc(fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos', editingBoloId), boloFormData);
+                    } else {
+                        await fb.addDoc(fb.collection(fb.db, 'artifacts', appId, 'public', 'data', 'bolos'), { 
+                            ...boloFormData, 
+                            memberCount: 0, 
+                            pendingCount: ALL_PEOPLE.length,
+                            declinedCount: 0,
+                            fechaCreacion: new Date().toISOString() 
+                        });
+                    }
+                    setShowBoloModal(false);
+                    setEditingBoloId(null);
+                    setBoloFormData({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "" });
+                } catch (e) { console.error("Save error:", e); }
+            };
+
+            const saveNewPassword = async () => {
+                if (!user || !fb || !fb.initialized || !newPassInput) return;
+                const appId = window.PROD_APP_ID;
+                const settingsDoc = fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'app_settings', 'config');
+                try {
+                    const updateData = isChangingPass === 'admin' ? { adminPass: newPassInput } : { userPass: newPassInput };
+                    await fb.updateDoc(settingsDoc, updateData);
+                    setIsChangingPass(null);
+                    setNewPassInput("");
+                } catch (e) { console.error("Update pass error:", e); }
+            };
+
+            const handleEditBolo = (id) => {
+                const bolo = bolos.find(b => b.id === id);
+                if (bolo) {
+                    setBoloFormData({ nombre: bolo.nombre || "", fecha: bolo.fecha || "", hora: bolo.hora || "", duracion: bolo.duracion || "", lugar: bolo.lugar || "" });
+                    setEditingBoloId(id);
+                    setShowBoloModal(true);
+                }
+            };
+
+            const borrarBolo = async (id) => {
+                if (!user || !fb || !fb.initialized) return;
+                const appId = window.PROD_APP_ID;
+                try {
+                    await fb.deleteDoc(fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos', id));
+                    await fb.deleteDoc(fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', id));
+                } catch (e) { console.error("Delete error:", e); }
+            };
+
+            const handlePersonSelection = (e, person) => {
+                e.stopPropagation();
+                if (personToMove === person) setPersonToMove(null);
+                else { setPersonToMove(person); }
+            };
+
+            const handleBoxClick = (instrument) => {
+                if (personToMove) movePerson(personToMove, instrument);
+            };
+
+            if (!fb) return (
+                <div className="h-screen w-screen flex items-center justify-center">
+                    <div className="animate-pulse text-green-900 font-black uppercase text-2xl italic tracking-tighter">Carregant Sistema...</div>
+                </div>
+            );
+
+            if (!isLoggedIn) {
+                return (
+                    <div className="h-screen w-screen flex items-center justify-center p-4 overflow-hidden text-green-950">
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm border-t-[10px] border-green-600">
+                            <h1 className="text-4xl font-black text-center mb-8 text-green-900 uppercase tracking-tighter italic">Tukats Login</h1>
+                            <form onSubmit={handleLogin} className="space-y-6">
+                                <div className="flex items-center space-x-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                    <input type="checkbox" id="adm" checked={isAdminMode} onChange={e => setIsAdminMode(e.target.checked)} className="w-6 h-6 accent-green-600 cursor-pointer" />
+                                    <label htmlFor="adm" className="text-sm font-black text-gray-700 cursor-pointer select-none uppercase tracking-tight">Mode Administrador</label>
+                                </div>
+                                <input type="password" placeholder="Contrasenya" className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-green-500 outline-none text-xl font-bold" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
+                                {errorMsg && <p className="text-red-500 text-sm font-black text-center">{errorMsg}</p>}
+                                <button type="submit" className="w-full bg-green-600 text-white font-black py-5 rounded-2xl hover:bg-green-700 shadow-xl shadow-green-200 transition-all uppercase tracking-widest text-lg">Entrar</button>
+                            </form>
+                        </div>
+                    </div>
+                );
+            }
+
+            if (!selectedBolo) {
+                return (
+                    <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
+                        <header className="px-6 py-4 bg-white/20 backdrop-blur-md flex justify-between items-center shrink-0 border-b border-white/20">
+                            <h2 className="text-2xl font-black italic tracking-tighter uppercase shrink-0">TUKATS - BOLOS</h2>
+                            <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
+                                {isAdminAuth && (
+                                    <>
+                                        <button onClick={() => setShowBoloModal(true)} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-green-700 shadow-md text-xs uppercase shrink-0"><Icon name="plus" size={14}/> NOU BOLO</button>
+                                        <button onClick={() => setIsChangingPass('admin')} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-blue-700 shadow-md text-xs uppercase shrink-0"><Icon name="key" size={14}/> Pass ADMIN</button>
+                                        <button onClick={() => setIsChangingPass('user')} className="bg-blue-500 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-blue-600 shadow-md text-xs uppercase shrink-0"><Icon name="key" size={14}/> Pass USUARI</button>
+                                    </>
+                                )}
+                                <button onClick={() => setIsLoggedIn(false)} className="bg-red-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-red-700 uppercase tracking-tighter shadow-md text-xs shrink-0"><Icon name="log-out" size={14}/> Sortir</button>
+                            </div>
+                        </header>
+                        <main className="flex-1 p-4 md:p-8 flex flex-col items-center overflow-hidden">
+                            <div className="w-full max-w-4xl bg-white/40 rounded-[3rem] p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
+                                <h3 className="text-4xl font-black mb-8 uppercase border-b border-green-900/10 pb-4 italic tracking-tighter">Propers Bolos</h3>
+                                <div className="flex-1 overflow-y-auto space-y-4 pr-3 custom-scrollbar">
+                                    {bolos.length === 0 ? <p className="text-center py-24 font-black opacity-30 italic text-2xl uppercase tracking-widest">No hi ha bolos</p> : 
+                                    [...bolos].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(b => {
+                                        const pasado = esPasado(b.fecha);
+                                        return (
+                                            <div 
+                                                key={b.id} 
+                                                draggable={isAdminAuth} 
+                                                onDragStart={e => e.dataTransfer.setData("id", b.id)} 
+                                                onClick={() => setSelectedBolo(b)} 
+                                                className={`group p-4 md:p-6 rounded-[2rem] flex justify-between items-center cursor-pointer transition-all border-2 border-transparent shadow-sm ${pasado ? 'bg-white/30 opacity-40 grayscale-[0.5]' : 'bg-white/70 hover:bg-white hover:border-green-500'}`}
+                                            >
+                                                <div className="space-y-1 flex-1">
+                                                    {/* Tamany titol Bolo a pagina llista bolos 28px (movil) i 3xl (escriptori)*/}
+						                            <h4 className={`text-[28px] md:text-3xl font-black uppercase leading-none tracking-tighter italic ${pasado ? 'text-slate-600' : 'text-green-900'}`}>{b.nombre}</h4>
+                                                     
+                                                    {/* Dades del bolo: Stack vertical en móvil y horizontal en escritorio */}
+                                                    <div className="flex flex-col md:flex-row md:flex-wrap gap-x-6 gap-y-2 md:gap-y-3 opacity-80 font-black text-base md:text-2xl uppercase tracking-wider mt-4">
+                                                        <span className="flex items-center gap-3"><Icon name="calendar" size={28}/> {b.fecha || '---'}</span>
+                                                        <span className="flex items-center gap-3"><Icon name="clock" size={28}/> {b.hora || '---'}</span>
+                                                        <span className="flex items-center gap-3"><Icon name="hourglass" size={28}/> {b.duracion || '---'}</span>
+                                                        <span className="flex items-center gap-3"><Icon name="map-pin" size={28}/> {b.lugar || 'Ubicació'}</span>
+                                                        
+                                                        {/* Labels OK, ?, NO: Fila única en móvil (px reduit para que quepan) */}
+                                                        <div className="flex flex-row gap-2 md:gap-4 mt-4 w-full">
+                                                            <span className={`px-2 py-2 md:px-4 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
+                                                                <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500"></span>
+                                                                {b.memberCount || 0} OK
+                                                            </span>
+                                                            <span className={`px-2 py-2 md:px-4 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
+                                                                <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-orange-400"></span>
+                                                                {b.pendingCount || 0} ?
+                                                            </span>
+                                                            <span className={`px-2 py-2 md:px-4 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
+                                                                <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500"></span>
+                                                                {b.declinedCount || 0} NO
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <Icon name="chevron-right" size={48} className={`${pasado ? 'text-slate-400' : 'text-green-500'} opacity-0 group-hover:opacity-100 transition-all ml-4 shrink-0`} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                                {isAdminAuth && bolos.length > 0 && (
+                                    <div className="mt-8 flex gap-6 shrink-0">
+                                        <div onDragOver={e=>e.preventDefault()} onDrop={e => handleEditBolo(e.dataTransfer.getData("id"))} className="flex-1 p-6 border-4 border-dashed border-blue-400 rounded-[2rem] flex flex-col items-center text-blue-600 hover:bg-blue-50 transition-colors">
+                                            <Icon name="edit-3" size={40} /><span className="text-xs font-black uppercase mt-3 tracking-widest text-center">Arrossega per EDITAR</span>
+                                        </div>
+                                        <div onDragOver={e=>e.preventDefault()} onDrop={e => { if(confirm("Vols esborrar el bolo?")) borrarBolo(e.dataTransfer.getData("id")); }} className="flex-1 p-6 border-4 border-dashed border-red-400 rounded-[2rem] flex flex-col items-center text-red-600 hover:bg-red-50 transition-colors">
+                                            <Icon name="trash-2" size={40} /><span className="text-xs font-black uppercase mt-3 tracking-widest text-center">Arrossega per ELIMINAR</span>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </main>
+                        
+                        {isChangingPass && (
+                            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[110]">
+                                <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-md border-b-[12px] border-blue-600">
+                                    <h3 className="text-2xl font-black mb-6 uppercase tracking-tighter italic">Canvi Pass {isChangingPass === 'admin' ? 'Administrador' : 'Usuari'}</h3>
+                                    <div className="space-y-4 mb-8">
+                                        <input type="text" placeholder="Nova Contrasenya" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-blue-500" value={newPassInput} onChange={e => setNewPassInput(e.target.value)} />
+                                        <p className="text-[10px] text-gray-400 font-bold uppercase ml-1">Atenció: Aquest canvi s'aplicarà immediatament.</p>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={saveNewPassword} className="flex-1 bg-blue-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg">Actualitzar</button>
+                                        <button onClick={() => { setIsChangingPass(null); setNewPassInput(""); }} className="flex-1 bg-gray-100 text-gray-400 py-5 rounded-2xl font-black uppercase tracking-widest">Cancel·lar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {showBoloModal && (
+                            <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
+                                <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-w-lg border-b-[12px] border-green-600">
+                                    <h3 className="text-3xl font-black mb-8 uppercase tracking-tighter italic">{editingBoloId ? 'Editar' : 'Nou'} Bolo</h3>
+                                    <div className="space-y-4 mb-8 text-sm">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase opacity-40 ml-1">Nom</label>
+                                            <input type="text" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none border-2 border-transparent focus:border-green-500" value={boloFormData.nombre} onChange={e=>setBoloFormData({...boloFormData, nombre:e.target.value})} />
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Fecha</label>
+                                                <input type="date" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={boloFormData.fecha} onChange={e=>setBoloFormData({...boloFormData, fecha:e.target.value})} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Hora</label>
+                                                <input type="time" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" value={boloFormData.hora} onChange={e=>setBoloFormData({...boloFormData, hora:e.target.value})} />
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Lloc</label>
+                                                <input type="text" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={boloFormData.lugar} onChange={e=>setBoloFormData({...boloFormData, lugar:e.target.value})} />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <label className="text-[10px] font-black uppercase opacity-40 ml-1">Duració</label>
+                                                <input type="text" placeholder="1h 30m" className="w-full p-4 bg-gray-50 rounded-2xl font-bold outline-none" value={boloFormData.duracion} onChange={e=>setBoloFormData({...boloFormData, duracion:e.target.value})} />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-4">
+                                        <button onClick={saveBolo} className="flex-1 bg-green-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg">Guardar</button>
+                                        <button onClick={() => { setShowBoloModal(false); setEditingBoloId(null); }} className="flex-1 bg-gray-100 text-gray-400 py-5 rounded-2xl font-black uppercase tracking-widest">Tancar</button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                );
+            }
+
+            // --- VISTA DETALL DEL BOLO ---
+            const confirmedCount = Object.values(assignments).filter(v => v !== null).length;
+            const declinedCount = Object.values(attendance).filter(v => v === 'red').length;
+            const pendingCount = ALL_PEOPLE.length - confirmedCount - declinedCount;
+
+            return (
+                <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
+                    <header className="px-6 py-4 bg-white/30 backdrop-blur-md flex flex-wrap justify-between items-center shrink-0 border-b border-white/20 gap-4">
+                        <div className="flex flex-col">
+                            <h2 className="text-2xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">{selectedBolo.nombre}</h2>
+                            {/* Mida lletra dades bolo (mòbil vs escriptori) -> Línia 413 ajustada a 12px */}
+                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 opacity-60 font-black text-[12px] md:text-xl uppercase tracking-widest">
+                                <span className="flex items-center gap-3"><Icon name="calendar" size={18}/> {selectedBolo.fecha}</span>
+                                <span className="flex items-center gap-3"><Icon name="clock" size={18}/> {selectedBolo.hora || '---'}</span>
+                                <span className="flex items-center gap-3"><Icon name="hourglass" size={18}/> {selectedBolo.duracion || '---'}</span>
+                                <span className="flex items-center gap-3"><Icon name="map-pin" size={18}/> {selectedBolo.lugar}</span>
+                            </div>
+                        </div>
+
+                        {/* Summary Bar reduïts un 30% aprox */}
+                        <div className="flex items-center bg-black/5 rounded-2xl px-6 py-3 gap-6">
+                            <div className="text-center">
+                                <div className="text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
+                                <div className="text-base font-black uppercase tracking-tighter opacity-50">OK</div>
+                            </div>
+                            <div className="w-px h-8 bg-black/10"></div>
+                            <div className="text-center">
+                                <div className="text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
+                                <div className="text-base font-black uppercase tracking-tighter opacity-50">?</div>
+                            </div>
+                            <div className="w-px h-8 bg-black/10"></div>
+                            <div className="text-center">
+                                <div className="text-2xl font-black leading-none text-red-600">{declinedCount}</div>
+                                <div className="text-base font-black uppercase tracking-tighter opacity-50">NO</div>
+                            </div>
+                        </div>
+
+                        {/* Línia 429: Botó Tornar (14px en mòbil) */}
+                        <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-8 py-3 rounded-2xl font-black text-[14px] md:text-xl uppercase shadow-xl flex items-center gap-2 active:scale-95 transition-all">Tornar</button>
+                    </header>
+                    
+                    <div className="flex-1 flex flex-row overflow-hidden">
+                        {isLoadingBoloData ? (
+                            <div className="flex-1 flex items-center justify-center">
+                                <div className="flex flex-col items-center gap-6">
+                                    <div className="w-16 h-16 border-[6px] border-green-600 border-t-transparent rounded-full loading-spin"></div>
+                                    <span className="font-black text-green-900 uppercase text-sm tracking-[0.3em] italic animate-pulse">Carregant dades...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <>
+                                <aside 
+                                    className={`w-[130px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 md:p-4 flex flex-col shrink-0 backdrop-blur-sm transition-colors overflow-hidden ${personToMove ? 'bg-green-50/50' : ''}`}
+                                    onDragOver={e=>e.preventDefault()} 
+                                    onDrop={e => movePerson(e.dataTransfer.getData("p"), null)}
+                                    onClick={() => handleBoxClick(null)}
+                                >
+                                    <div className="flex flex-col min-h-0 flex-1">
+                                        <h3 className="text-[16px] md:text-[20px] font-black uppercase mb-3 text-center tracking-[0.1em] text-orange-700/60 shrink-0 italic bg-orange-100/50 py-1.5 rounded-lg">Pendents</h3>
+                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pb-2 px-1">
+                                            {ALL_PEOPLE.filter(p => !assignments[p] && attendance[p] !== 'red').map(p => (
+                                                <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
+                                                    className={`pointer-events-auto shrink-0 relative p-3 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[24px] font-black text-center cursor-grab border-2 border-transparent bg-white/40 hover:bg-white transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
+                                                    {p}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-col mt-2 md:mt-4 pt-2 md:pt-4 border-t border-white/30 max-h-[40%]">
+                                        <h3 className="text-[16px] md:text-[20px] font-black uppercase mb-3 text-center tracking-[0.1em] text-red-600/50 shrink-0 italic bg-red-50 py-1.5 rounded-lg">No Poden</h3>
+                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar px-1">
+                                            {ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
+                                                <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
+                                                    className={`pointer-events-auto shrink-0 relative p-2.5 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[22px] font-black text-center cursor-grab border-2 border-transparent bg-red-100 text-red-600 hover:bg-red-200 transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
+                                                    {p}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </aside>
+
+                                <main className="flex-1 p-1 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-[10px] md:gap-4 auto-rows-min md:auto-rows-fr overflow-y-auto custom-scrollbar content-start">
+                                    {INSTRUMENTS.map(inst => (
+                                        <div key={inst} onDragOver={e=>e.preventDefault()} onDrop={e => movePerson(e.dataTransfer.getData("p"), inst)} onClick={() => handleBoxClick(inst)}
+                                            className={`bg-white/40 rounded-xl md:rounded-[2rem] p-1.5 md:p-4 flex flex-col min-h-0 border border-white/40 shadow-inner transition-colors h-[120px] md:h-auto ${personToMove ? 'hover:bg-green-100 cursor-pointer border-green-400' : ''}`}>
+                                            <h3 className="text-[18px] md:text-[14px] font-black uppercase mb-1 md:mb-3 border-b-2 border-green-900/10 shrink-0 italic tracking-widest">{inst}</h3>
+                                            <div className="flex-1 flex flex-wrap gap-1 md:gap-2 content-start overflow-y-auto custom-scrollbar pointer-events-none">
+                                                {ALL_PEOPLE.filter(p => assignments[p] === inst).map(p => (
+                                                    <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
+                                                        className={`pointer-events-auto relative px-2 py-0.5 rounded-md font-black text-[13px] md:text-[26px] tracking-tighter cursor-grab active:cursor-grabbing hover:scale-105 transition-all leading-none ${attendance[p] === 'green' ? 'text-green-700 font-black' : 'text-gray-500'} ${personToMove === p ? 'person-selected' : ''}`}>
+                                                        {p}
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    ))}
+                                </main>
+                            </>
+                        )}
+                    </div>
+                    {personToMove && (
+                        <div className="fixed bottom-2 md:bottom-4 left-[130px] md:left-80 right-0 z-[100] flex justify-center pointer-events-none animate-in slide-in-from-bottom duration-300">
+                            <div className="pointer-events-auto bg-green-600 text-white px-4 py-2.5 md:px-8 md:py-4 rounded-full shadow-2xl font-black text-[12px] md:text-[16px] uppercase tracking-widest flex items-center gap-3 md:gap-6 border border-white/20">
+                                <span className="hidden md:inline">Prem una caixa per moure a {personToMove}</span>
+                                <span className="md:hidden">Moure {personToMove}</span>
+                                {attendance[personToMove] !== 'red' && (
+                                    <button onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        const nextAtt = { ...attendance, [personToMove]: 'red' };
+                                        const nextAss = { ...assignments, [personToMove]: null };
+                                        setAttendance(nextAtt);
+                                        setAssignments(nextAss);
+                                        syncState(nextAtt, nextAss);
+                                        setPersonToMove(null);
+                                    }}
+                                        className="bg-red-700 hover:bg-red-800 px-3 py-1.5 md:px-6 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">NO PUC</button>
+                                )}
+                                <button onClick={(e) => { e.stopPropagation(); setPersonToMove(null); }} className="bg-black/20 hover:bg-black/40 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors font-bold text-xl md:text-2xl">×</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
