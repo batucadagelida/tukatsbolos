@@ -383,10 +383,11 @@
                                 <button onClick={() => setIsLoggedIn(false)} className="bg-red-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-red-700 uppercase tracking-tighter shadow-md text-xs shrink-0"><Icon name="log-out" size={14}/> Sortir</button>
                             </div>
                         </header>
-                        <main className="flex-1 p-4 md:p-8 flex flex-col items-center overflow-hidden">
-                            <div className="w-full max-w-4xl bg-white/40 rounded-[3rem] p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
-                                <h3 className="text-4xl font-black mb-8 uppercase border-b border-green-900/10 pb-4 italic tracking-tighter">Propers Bolos</h3>
-                                <div className="flex-1 overflow-y-auto space-y-4 pr-3 custom-scrollbar">
+                        <main className="flex-1 p-2 md:p-8 flex flex-col items-center overflow-hidden">
+                            {/* He ampliat max-w-4xl a 5xl i reduït el padding per guanyar amplada lateral */}
+                            <div className="w-full max-w-5xl bg-white/40 rounded-[2.5rem] md:rounded-[3rem] p-3 md:p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
+                                <h3 className="text-3xl md:text-4xl font-black mb-6 md:mb-8 uppercase border-b border-green-900/10 pb-4 italic tracking-tighter">Propers Bolos</h3>
+                                <div className="flex-1 overflow-y-auto space-y-4 pr-1 md:pr-3 custom-scrollbar">
                                     {bolos.length === 0 ? <p className="text-center py-24 font-black opacity-30 italic text-2xl uppercase tracking-widest">No hi ha bolos</p> : 
                                     [...bolos].sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||'')).map(b => {
                                         const pasado = esPasado(b.fecha);
@@ -396,48 +397,45 @@
                                                 draggable={isAdminAuth} 
                                                 onDragStart={e => e.dataTransfer.setData("id", b.id)} 
                                                 onClick={() => setSelectedBolo(b)} 
-                                                className={`group p-4 md:p-6 rounded-[2rem] flex justify-between items-center cursor-pointer transition-all border-2 border-transparent shadow-sm ${pasado ? 'bg-white/30 opacity-40 grayscale-[0.5]' : 'bg-white/70 hover:bg-white hover:border-green-500'}`}
+                                                className={`group p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] flex justify-between items-center cursor-pointer transition-all border-2 border-transparent shadow-sm ${pasado ? 'bg-white/30 opacity-40 grayscale-[0.5]' : 'bg-white/70 hover:bg-white hover:border-green-500'}`}
                                             >
                                                 <div className="space-y-1 flex-1">
-                                                    {/* Tamany titol Bolo a pagina llista bolos 28px (movil) i 3xl (escriptori)*/}
-						                            <h4 className={`text-[28px] md:text-3xl font-black uppercase leading-none tracking-tighter italic ${pasado ? 'text-slate-600' : 'text-green-900'}`}>{b.nombre}</h4>
-                                                     
-                                                    {/* Dades del bolo: Stack vertical en móvil y horizontal en escritorio */}
-                                                    <div className="flex flex-col md:flex-row md:flex-wrap gap-x-6 gap-y-2 md:gap-y-3 opacity-80 font-black text-base md:text-2xl uppercase tracking-wider mt-4">
-                                                        <span className="flex items-center gap-3"><Icon name="calendar" size={28}/> {b.fecha || '---'}</span>
-                                                        <span className="flex items-center gap-3"><Icon name="clock" size={28}/> {b.hora || '---'}</span>
-                                                        <span className="flex items-center gap-3"><Icon name="hourglass" size={28}/> {b.duracion || '---'}</span>
-                                                        <span className="flex items-center gap-3"><Icon name="map-pin" size={28}/> {b.lugar || 'Ubicació'}</span>
+                                                    <h4 className={`text-[24px] md:text-3xl font-black uppercase leading-tight tracking-tighter italic ${pasado ? 'text-slate-600' : 'text-green-900'}`}>{b.nombre}</h4>
+                                                    
+                                                    <div className="flex flex-col md:flex-row md:flex-wrap gap-x-6 gap-y-2 md:gap-y-3 opacity-80 font-black text-sm md:text-2xl uppercase tracking-wider mt-3 md:mt-4">
+                                                        <span className="flex items-center gap-2 md:gap-3"><Icon name="calendar" size={24}/> {b.fecha || '---'}</span>
+                                                        <span className="flex items-center gap-2 md:gap-3"><Icon name="clock" size={24}/> {b.hora || '---'}</span>
+                                                        <span className="flex items-center gap-2 md:gap-3"><Icon name="hourglass" size={24}/> {b.duracion || '---'}</span>
+                                                        <span className="flex items-center gap-2 md:gap-3"><Icon name="map-pin" size={24}/> {b.lugar || 'Ubicació'}</span>
                                                         
-                                                        {/* Labels OK, ?, NO: Fila única en móvil (px reduit para que quepan) */}
-                                                        <div className="flex flex-row gap-2 md:gap-4 mt-4 w-full">
-                                                            <span className={`px-2 py-2 md:px-4 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
+                                                        <div className="flex flex-row gap-2 md:gap-4 mt-3 md:mt-4 w-full flex-wrap">
+                                                            <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
                                                                 <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500"></span>
                                                                 {b.memberCount || 0} OK
                                                             </span>
-                                                            <span className={`px-2 py-2 md:px-4 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
+                                                            <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
                                                                 <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-orange-400"></span>
                                                                 {b.pendingCount || 0} ?
                                                             </span>
-                                                            <span className={`px-2 py-2 md:px-4 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
+                                                            <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
                                                                 <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500"></span>
                                                                 {b.declinedCount || 0} NO
                                                             </span>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                <Icon name="chevron-right" size={48} className={`${pasado ? 'text-slate-400' : 'text-green-500'} opacity-0 group-hover:opacity-100 transition-all ml-4 shrink-0`} />
+                                                <Icon name="chevron-right" size={40} className={`${pasado ? 'text-slate-400' : 'text-green-500'} opacity-0 group-hover:opacity-100 transition-all ml-2 md:ml-4 shrink-0`} />
                                             </div>
                                         );
                                     })}
                                 </div>
                                 {isAdminAuth && bolos.length > 0 && (
-                                    <div className="mt-8 flex gap-6 shrink-0">
-                                        <div onDragOver={e=>e.preventDefault()} onDrop={e => handleEditBolo(e.dataTransfer.getData("id"))} className="flex-1 p-6 border-4 border-dashed border-blue-400 rounded-[2rem] flex flex-col items-center text-blue-600 hover:bg-blue-50 transition-colors">
-                                            <Icon name="edit-3" size={40} /><span className="text-xs font-black uppercase mt-3 tracking-widest text-center">Arrossega per EDITAR</span>
+                                    <div className="mt-6 md:mt-8 flex gap-4 md:gap-6 shrink-0">
+                                        <div onDragOver={e=>e.preventDefault()} onDrop={e => handleEditBolo(e.dataTransfer.getData("id"))} className="flex-1 p-4 md:p-6 border-4 border-dashed border-blue-400 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center text-blue-600 hover:bg-blue-50 transition-colors">
+                                            <Icon name="edit-3" size={32} /><span className="text-[10px] font-black uppercase mt-2 tracking-widest text-center">EDITAR</span>
                                         </div>
-                                        <div onDragOver={e=>e.preventDefault()} onDrop={e => { if(confirm("Vols esborrar el bolo?")) borrarBolo(e.dataTransfer.getData("id")); }} className="flex-1 p-6 border-4 border-dashed border-red-400 rounded-[2rem] flex flex-col items-center text-red-600 hover:bg-red-50 transition-colors">
-                                            <Icon name="trash-2" size={40} /><span className="text-xs font-black uppercase mt-3 tracking-widest text-center">Arrossega per ELIMINAR</span>
+                                        <div onDragOver={e=>e.preventDefault()} onDrop={e => { if(confirm("Vols esborrar el bolo?")) borrarBolo(e.dataTransfer.getData("id")); }} className="flex-1 p-4 md:p-6 border-4 border-dashed border-red-400 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center text-red-600 hover:bg-red-50 transition-colors">
+                                            <Icon name="trash-2" size={32} /><span className="text-[10px] font-black uppercase mt-2 tracking-widest text-center">ELIMINAR</span>
                                         </div>
                                     </div>
                                 )}
@@ -508,38 +506,38 @@
 
             return (
                 <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
-                    <header className="px-6 py-4 bg-white/30 backdrop-blur-md flex flex-wrap justify-between items-center shrink-0 border-b border-white/20 gap-4">
-                        <div className="flex flex-col">
+                    <header className="px-6 py-4 bg-white/30 backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 border-b border-white/20 gap-4">
+                        <div className="flex flex-col w-full md:w-auto">
                             <h2 className="text-2xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">{selectedBolo.nombre}</h2>
-                            {/* Mida lletra dades bolo (mòbil vs escriptori) -> Línia 413 ajustada a 12px */}
-                            <div className="flex flex-wrap items-center gap-x-6 gap-y-2 mt-3 opacity-60 font-black text-[12px] md:text-xl uppercase tracking-widest">
-                                <span className="flex items-center gap-3"><Icon name="calendar" size={18}/> {selectedBolo.fecha}</span>
-                                <span className="flex items-center gap-3"><Icon name="clock" size={18}/> {selectedBolo.hora || '---'}</span>
-                                <span className="flex items-center gap-3"><Icon name="hourglass" size={18}/> {selectedBolo.duracion || '---'}</span>
-                                <span className="flex items-center gap-3"><Icon name="map-pin" size={18}/> {selectedBolo.lugar}</span>
+                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 md:mt-3 opacity-60 font-black text-[11px] md:text-xl uppercase tracking-widest">
+                                <span className="flex items-center gap-2 md:gap-3"><Icon name="calendar" size={16}/> {selectedBolo.fecha}</span>
+                                <span className="flex items-center gap-2 md:gap-3"><Icon name="clock" size={16}/> {selectedBolo.hora || '---'}</span>
+                                <span className="flex items-center gap-2 md:gap-3"><Icon name="hourglass" size={16}/> {selectedBolo.duracion || '---'}</span>
+                                <span className="flex items-center gap-2 md:gap-3"><Icon name="map-pin" size={16}/> {selectedBolo.lugar}</span>
                             </div>
                         </div>
 
-                        {/* Summary Bar reduïts un 30% aprox */}
-                        <div className="flex items-center bg-black/5 rounded-2xl px-6 py-3 gap-6">
-                            <div className="text-center">
-                                <div className="text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
-                                <div className="text-base font-black uppercase tracking-tighter opacity-50">OK</div>
+                        {/* Contenidor Summary + Botó Tornar per a mòbil en una fila */}
+                        <div className="flex items-center justify-between w-full md:w-auto gap-3">
+                            <div className="flex items-center bg-black/5 rounded-2xl px-3 py-2 md:px-6 md:py-3 gap-3 md:gap-6 flex-1 md:flex-none justify-around md:justify-start">
+                                <div className="text-center">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
+                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50">OK</div>
+                                </div>
+                                <div className="w-px h-6 md:h-8 bg-black/10"></div>
+                                <div className="text-center">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
+                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50">?</div>
+                                </div>
+                                <div className="w-px h-6 md:h-8 bg-black/10"></div>
+                                <div className="text-center">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
+                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50">NO</div>
+                                </div>
                             </div>
-                            <div className="w-px h-8 bg-black/10"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
-                                <div className="text-base font-black uppercase tracking-tighter opacity-50">?</div>
-                            </div>
-                            <div className="w-px h-8 bg-black/10"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-black leading-none text-red-600">{declinedCount}</div>
-                                <div className="text-base font-black uppercase tracking-tighter opacity-50">NO</div>
-                            </div>
-                        </div>
 
-                        {/* Línia 429: Botó Tornar (14px en mòbil) */}
-                        <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-8 py-3 rounded-2xl font-black text-[14px] md:text-xl uppercase shadow-xl flex items-center gap-2 active:scale-95 transition-all">Tornar</button>
+                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-4 py-2.5 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-[13px] md:text-xl uppercase shadow-xl active:scale-95 transition-all shrink-0">Tornar</button>
+                        </div>
                     </header>
                     
                     <div className="flex-1 flex flex-row overflow-hidden">
@@ -558,9 +556,10 @@
                                     onDrop={e => movePerson(e.dataTransfer.getData("p"), null)}
                                     onClick={() => handleBoxClick(null)}
                                 >
-                                    <div className="flex flex-col min-h-0 flex-1">
+                                    {/* SECCIÓ PENDENTS AMB MAX 3 ELEMENTS */}
+                                    <div className="flex flex-col min-h-0 shrink-0">
                                         <h3 className="text-[16px] md:text-[20px] font-black uppercase mb-3 text-center tracking-[0.1em] text-orange-700/60 shrink-0 italic bg-orange-100/50 py-1.5 rounded-lg">Pendents</h3>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pb-2 px-1">
+                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pb-2 px-1 max-h-[160px] md:max-h-[260px]">
                                             {ALL_PEOPLE.filter(p => !assignments[p] && attendance[p] !== 'red').map(p => (
                                                 <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
                                                     className={`pointer-events-auto shrink-0 relative p-3 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[24px] font-black text-center cursor-grab border-2 border-transparent bg-white/40 hover:bg-white transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
@@ -570,9 +569,10 @@
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-col mt-2 md:mt-4 pt-2 md:pt-4 border-t border-white/30 max-h-[40%]">
+                                    {/* SECCIÓ NO PODEN AMB MAX 3 ELEMENTS */}
+                                    <div className="flex flex-col mt-4 pt-4 border-t border-white/30 shrink-0">
                                         <h3 className="text-[16px] md:text-[20px] font-black uppercase mb-3 text-center tracking-[0.1em] text-red-600/50 shrink-0 italic bg-red-50 py-1.5 rounded-lg">No Poden</h3>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar px-1">
+                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar px-1 max-h-[160px] md:max-h-[260px]">
                                             {ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
                                                 <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
                                                     className={`pointer-events-auto shrink-0 relative p-2.5 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[22px] font-black text-center cursor-grab border-2 border-transparent bg-red-100 text-red-600 hover:bg-red-200 transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
@@ -581,6 +581,9 @@
                                             ))}
                                         </div>
                                     </div>
+                                    
+                                    {/* Espai flexible per empènyer el contingut cap amunt si cal */}
+                                    <div className="flex-1 min-h-0"></div>
                                 </aside>
 
                                 <main className="flex-1 p-1 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-[10px] md:gap-4 auto-rows-min md:auto-rows-fr overflow-y-auto custom-scrollbar content-start">
