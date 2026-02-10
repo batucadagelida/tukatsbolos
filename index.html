@@ -50,7 +50,7 @@
 <body>
     <div id="root"></div>
 
-    <!-- Inicialización de Firebase -->
+    <!-- Inicialització de Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
@@ -114,7 +114,8 @@
                 clock: <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
                 hourglass: <><path d="M5 2h14M5 22h14M15 2v5l-3 3-3-3V2M9 22v-5l3-3 3 3v5"/></>,
                 key: <><path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.778-7.778Zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3-3.5 3.5Z"/></>,
-                eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+                eye: <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+                info: <><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></>
             };
 
             return (
@@ -148,8 +149,10 @@
             const [assignments, setAssignments] = useState({});
             const [settings, setSettings] = useState({ userPass: "TUKATS", adminPass: "ADMIN" });
             const [showBoloModal, setShowBoloModal] = useState(false);
+            const [showInfoModal, setShowInfoModal] = useState(false);
             const [editingBoloId, setEditingBoloId] = useState(null);
-            const [boloFormData, setBoloFormData] = useState({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "" });
+            const [boloFormData, setBoloFormData] = useState({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "", info: "" });
+            const [infoEditContent, setInfoEditContent] = useState("");
             const [personToMove, setPersonToMove] = useState(null);
             const [isChangingPass, setIsChangingPass] = useState(null); 
             const [newPassInput, setNewPassInput] = useState("");
@@ -313,8 +316,20 @@
                     }
                     setShowBoloModal(false);
                     setEditingBoloId(null);
-                    setBoloFormData({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "" });
+                    setBoloFormData({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "", info: "" });
                 } catch (e) { console.error("Save error:", e); }
+            };
+
+            const saveInfoExtra = async () => {
+                if (!selectedBolo || !fb || !fb.initialized) return;
+                const appId = window.PROD_APP_ID;
+                try {
+                    await fb.updateDoc(fb.doc(fb.db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id), {
+                        info: infoEditContent
+                    });
+                    setSelectedBolo(prev => ({ ...prev, info: infoEditContent }));
+                    setShowInfoModal(false);
+                } catch (e) { console.error("Error guardant info:", e); }
             };
 
             const saveNewPassword = async () => {
@@ -332,10 +347,22 @@
             const handleEditBolo = (id) => {
                 const bolo = bolos.find(b => b.id === id);
                 if (bolo) {
-                    setBoloFormData({ nombre: bolo.nombre || "", fecha: bolo.fecha || "", hora: bolo.hora || "", duracion: bolo.duracion || "", lugar: bolo.lugar || "" });
+                    setBoloFormData({ 
+                        nombre: bolo.nombre || "", 
+                        fecha: bolo.fecha || "", 
+                        hora: bolo.hora || "", 
+                        duracion: bolo.duracion || "", 
+                        lugar: bolo.lugar || "", 
+                        info: bolo.info || "" 
+                    });
                     setEditingBoloId(id);
                     setShowBoloModal(true);
                 }
+            };
+
+            const handleInfoClick = () => {
+                setInfoEditContent(selectedBolo.info || "");
+                setShowInfoModal(true);
             };
 
             const borrarBolo = async (id) => {
@@ -359,44 +386,58 @@
 
             const renderBoloCard = (b) => {
                 const pasado = esPasado(b);
+                const hasInfo = b.info && b.info.trim().length > 0;
                 return (
                     <div 
                         key={b.id} 
                         draggable={isAdminAuth} 
                         onDragStart={e => e.dataTransfer.setData("id", b.id)} 
                         onClick={() => setSelectedBolo(b)} 
-                        className={`group p-4 md:p-6 rounded-[1.5rem] md:rounded-[2rem] flex justify-between items-center cursor-pointer transition-all border-2 border-transparent shadow-sm ${pasado ? 'bg-white/30 opacity-40 grayscale-[0.5]' : 'bg-white/70 hover:bg-white hover:border-green-500'}`}
+                        className={`group p-3 md:p-6 rounded-[1.5rem] md:rounded-[2rem] flex justify-between items-center cursor-pointer transition-all border-2 border-transparent shadow-sm ${pasado ? 'bg-white/30 opacity-40 grayscale-[0.5]' : 'bg-white/70 hover:bg-white hover:border-green-500'}`}
                     >
                         <div className="space-y-1 flex-1">
-                            <h4 className={`text-[22px] md:text-3xl font-black leading-tight tracking-tighter italic ${pasado ? 'text-slate-600' : 'text-green-900'}`}>{b.nombre}</h4>
+                            <h4 className={`text-[20px] md:text-3xl font-black leading-tight tracking-tighter italic ${pasado ? 'text-slate-600' : 'text-green-900'}`}>{b.nombre}</h4>
                             
-                            <div className="flex flex-col md:flex-row md:flex-wrap gap-x-6 gap-y-2 md:gap-y-3 opacity-80 font-black text-sm md:text-2xl uppercase tracking-wider mt-3 md:mt-4">
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="calendar" size={24}/> {b.fecha || '---'}</span>
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="clock" size={24}/> {b.hora || '---'}</span>
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="hourglass" size={24}/> {b.duracion || '---'}</span>
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="map-pin" size={24}/> {b.lugar || 'Ubicació'}</span>
+                            <div className="flex flex-col gap-y-1 md:gap-y-3 opacity-80 font-black text-xs md:text-2xl uppercase tracking-wider mt-2 md:mt-4">
+                                {/* Linia 1: Data */}
+                                <span className="flex items-center gap-1.5 md:gap-3"><Icon name="calendar" size={18}/> {b.fecha || '---'}</span>
                                 
-                                <div className="flex flex-row gap-2 md:gap-4 mt-3 md:mt-4 w-full flex-wrap">
-                                    <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
-                                        <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-green-500"></span>
+                                {/* Linia 2: Hora i Durada */}
+                                <div className="flex items-center gap-x-4 md:gap-x-8">
+                                    <span className="flex items-center gap-1.5 md:gap-3"><Icon name="clock" size={18}/> {b.hora || '---'}</span>
+                                    <span className="flex items-center gap-1.5 md:gap-3"><Icon name="hourglass" size={18}/> {b.duracion || '---'}</span>
+                                </div>
+
+                                {/* Linia 3: Lloc */}
+                                <span className="flex items-center gap-1.5 md:gap-3"><Icon name="map-pin" size={18}/> {b.lugar || 'Ubicació'}</span>
+                                
+                                {/* Linia 4: Botons/Indicadors */}
+                                <div className="flex flex-row gap-1 md:gap-4 mt-2 md:mt-4 w-full flex-nowrap md:flex-wrap items-center overflow-x-hidden">
+                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
+                                        <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-green-500"></span>
                                         {b.memberCount || 0} OK
                                     </span>
-                                    <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
-                                        <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-orange-400"></span>
+                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
+                                        <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-orange-400"></span>
                                         {b.pendingCount || 0} ?
                                     </span>
-                                    <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
-                                        <span className="w-2 h-2 md:w-3 md:h-3 rounded-full bg-red-500"></span>
+                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
+                                        <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-red-500"></span>
                                         {b.declinedCount || 0} NO
                                     </span>
-                                    <span className={`px-2 py-1.5 md:px-4 md:py-2 rounded-full flex items-center gap-2 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-blue-100 text-blue-700 border-2 border-blue-200'}`}>
-                                        <Icon name="eye" size={14} className="text-blue-500"/>
+                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-blue-100 text-blue-700 border-2 border-blue-200'}`}>
+                                        <Icon name="eye" size={12} className="text-blue-500"/>
                                         {b.watchingCount || 0}
                                     </span>
+                                    {hasInfo && (
+                                        <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[9px] md:text-xl ${pasado ? 'bg-slate-400' : 'bg-blue-700'} text-white font-black shrink-0`}>
+                                            <Icon name="info" size={10}/> +INFO
+                                        </span>
+                                    )}
                                 </div>
                             </div>
                         </div>
-                        <Icon name="chevron-right" size={40} className={`${pasado ? 'text-slate-400' : 'text-green-500'} opacity-0 group-hover:opacity-100 transition-all ml-2 md:ml-4 shrink-0`} />
+                        <Icon name="chevron-right" size={24} className={`${pasado ? 'text-slate-400' : 'text-green-500'} opacity-0 group-hover:opacity-100 transition-all ml-1 md:ml-4 shrink-0`} />
                     </div>
                 );
             };
@@ -438,7 +479,7 @@
                             <div className="flex gap-2 overflow-x-auto no-scrollbar py-1">
                                 {isAdminAuth && (
                                     <>
-                                        <button onClick={() => setShowBoloModal(true)} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-green-700 shadow-md text-xs uppercase shrink-0"><Icon name="plus" size={14}/> NOU BOLO</button>
+                                        <button onClick={() => { setEditingBoloId(null); setBoloFormData({ nombre: "", fecha: "", hora: "", duracion: "", lugar: "", info: "" }); setShowBoloModal(true); }} className="bg-green-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-green-700 shadow-md text-xs uppercase shrink-0"><Icon name="plus" size={14}/> NOU BOLO</button>
                                         <button onClick={() => setIsChangingPass('admin')} className="bg-blue-600 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-blue-700 shadow-md text-xs uppercase shrink-0"><Icon name="key" size={14}/> Pass ADMIN</button>
                                         <button onClick={() => setIsChangingPass('user')} className="bg-blue-500 text-white px-4 py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-blue-600 shadow-md text-xs uppercase shrink-0"><Icon name="key" size={14}/> Pass USUARI</button>
                                     </>
@@ -447,12 +488,13 @@
                             </div>
                         </header>
                         <main className="flex-1 p-2 md:p-8 flex flex-col items-center overflow-hidden">
-                            <div className="w-full max-w-5xl bg-white/40 rounded-[2.5rem] md:rounded-[3rem] p-3 md:p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
+                            {/* He reduït p-3 md:p-8 a p-2 md:p-8 per mòbil */}
+                            <div className="w-full max-w-5xl bg-white/40 rounded-[2rem] md:rounded-[3rem] p-2 md:p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
                                 
-                                <div className="flex-1 overflow-y-auto pr-1 md:pr-3 custom-scrollbar space-y-12">
+                                <div className="flex-1 overflow-y-auto pr-1 md:pr-3 custom-scrollbar space-y-8 md:y-12">
                                     <section>
-                                        <h3 className="text-3xl md:text-4xl font-black mb-6 uppercase border-b border-green-900/10 pb-4 italic tracking-tighter">Propers Bolos</h3>
-                                        <div className="space-y-4">
+                                        <h3 className="text-2xl md:text-4xl font-black mb-4 md:mb-6 uppercase border-b border-green-900/10 pb-2 md:pb-4 italic tracking-tighter">Propers Bolos</h3>
+                                        <div className="space-y-3 md:space-y-4">
                                             {futureBolos.length === 0 ? (
                                                 <p className="text-center py-10 font-black opacity-30 italic text-xl uppercase tracking-widest">No hi ha bolos futurs</p>
                                             ) : futureBolos.map(renderBoloCard)}
@@ -460,8 +502,8 @@
                                     </section>
 
                                     <section>
-                                        <h3 className="text-3xl md:text-4xl font-black mb-6 uppercase border-b border-green-900/10 pb-4 italic tracking-tighter opacity-40">Bolos Passats</h3>
-                                        <div className="space-y-4">
+                                        <h3 className="text-2xl md:text-4xl font-black mb-4 md:mb-6 uppercase border-b border-green-900/10 pb-2 md:pb-4 italic tracking-tighter opacity-40">Bolos Passats</h3>
+                                        <div className="space-y-3 md:space-y-4">
                                             {pastBolos.length === 0 ? (
                                                 <p className="text-center py-10 font-black opacity-20 italic text-xl uppercase tracking-widest">No hi ha historial</p>
                                             ) : pastBolos.map(renderBoloCard)}
@@ -470,7 +512,7 @@
                                 </div>
 
                                 {isAdminAuth && bolos.length > 0 && (
-                                    <div className="mt-6 md:mt-8 flex gap-4 md:gap-6 shrink-0">
+                                    <div className="mt-4 md:mt-8 flex gap-4 md:gap-6 shrink-0">
                                         <div onDragOver={e=>e.preventDefault()} onDrop={e => handleEditBolo(e.dataTransfer.getData("id"))} className="flex-1 p-4 md:p-6 border-4 border-dashed border-blue-400 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center text-blue-600 hover:bg-blue-50 transition-colors">
                                             <Icon name="edit-3" size={32} /><span className="text-[10px] font-black uppercase mt-2 tracking-widest text-center">EDITAR</span>
                                         </div>
@@ -482,6 +524,7 @@
                             </div>
                         </main>
                         
+                        {/* Modals de canvi pass i edició (sense canvis de layout) */}
                         {isChangingPass && (
                             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[110]">
                                 <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-md border-b-[12px] border-blue-600">
@@ -544,44 +587,52 @@
             const declinedCount = Object.values(attendance).filter(v => v === 'red').length;
             const watchingCount = Object.values(attendance).filter(v => v === 'blue').length;
             const pendingCount = ALL_PEOPLE.length - confirmedCount - declinedCount - watchingCount;
+            const hasInfo = selectedBolo.info && selectedBolo.info.trim().length > 0;
+            const pasado = esPasado(selectedBolo);
 
             return (
                 <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
-                    <header className="px-6 py-4 bg-white/30 backdrop-blur-md flex flex-col md:flex-row justify-between items-start md:items-center shrink-0 border-b border-white/20 gap-4">
+                    <header className="px-4 py-3 md:px-6 md:py-4 bg-white/30 backdrop-blur-md flex flex-col justify-between shrink-0 border-b border-white/20 gap-2 md:gap-4">
                         <div className="flex flex-col w-full md:w-auto">
-                            <h2 className="text-2xl md:text-4xl font-black italic leading-none tracking-tighter">{selectedBolo.nombre}</h2>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 md:mt-3 opacity-60 font-black text-[11px] md:text-xl uppercase tracking-widest">
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="calendar" size={16}/> {selectedBolo.fecha}</span>
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="clock" size={16}/> {selectedBolo.hora || '---'}</span>
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="hourglass" size={16}/> {selectedBolo.duracion || '---'}</span>
-                                <span className="flex items-center gap-2 md:gap-3"><Icon name="map-pin" size={16}/> {selectedBolo.lugar}</span>
+                            <h2 className="text-xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">{selectedBolo.nombre}</h2>
+                            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 md:mt-3 opacity-60 font-black text-[10px] md:text-xl uppercase tracking-widest">
+                                <span className="flex items-center gap-1 md:gap-3"><Icon name="calendar" size={14}/> {selectedBolo.fecha}</span>
+                                <span className="flex items-center gap-1 md:gap-3"><Icon name="clock" size={14}/> {selectedBolo.hora || '---'}</span>
+                                <span className="flex items-center gap-1 md:gap-3"><Icon name="map-pin" size={14}/> {selectedBolo.lugar}</span>
                             </div>
                         </div>
 
-                        <div className="flex items-center justify-between w-full md:w-auto gap-3">
-                            <div className="flex items-center bg-black/5 rounded-2xl px-2 py-2 md:px-6 md:py-3 gap-2 md:gap-6 flex-1 md:flex-none justify-around md:justify-start">
+                        {/* Fila compacta per mòbil */}
+                        <div className="flex items-center justify-between w-full gap-1.5 md:gap-3">
+                            <div className="flex items-center bg-black/5 rounded-xl md:rounded-2xl px-1.5 py-1 md:px-6 md:py-3 gap-1.5 md:gap-6 flex-1 justify-around">
                                 <div className="text-center">
-                                    <div className="text-xl md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50">OK</div>
+                                    <div className="text-sm md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
+                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50">OK</div>
                                 </div>
-                                <div className="w-px h-6 md:h-8 bg-black/10"></div>
                                 <div className="text-center">
-                                    <div className="text-xl md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50">?</div>
+                                    <div className="text-sm md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
+                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50">?</div>
                                 </div>
-                                <div className="w-px h-6 md:h-8 bg-black/10"></div>
                                 <div className="text-center">
-                                    <div className="text-xl md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50">NO</div>
+                                    <div className="text-sm md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
+                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50">NO</div>
                                 </div>
-                                <div className="w-px h-6 md:h-8 bg-black/10"></div>
                                 <div className="text-center">
-                                    <div className="text-xl md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase tracking-tighter opacity-50"><Icon name="eye" size={14} className="mx-auto"/></div>
+                                    <div className="text-sm md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
+                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50 leading-none"><Icon name="eye" size={10} className="mx-auto mt-0.5"/></div>
                                 </div>
+                                {/* BOTÓ +INFO integrat al resum en mòbil */}
+                                {(isAdminAuth || hasInfo) && (
+                                    <button 
+                                        onClick={handleInfoClick}
+                                        className={`${pasado ? 'bg-slate-400' : 'bg-blue-700'} text-white px-1.5 py-1 rounded-lg font-black text-[8px] md:text-xl uppercase flex items-center gap-1 shadow-sm`}
+                                    >
+                                        <Icon name="info" size={10}/> INFO
+                                    </button>
+                                )}
                             </div>
 
-                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-4 py-2.5 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-[13px] md:text-xl uppercase shadow-xl active:scale-95 transition-all shrink-0">Tornar</button>
+                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-3 py-2 md:px-8 md:py-3 rounded-lg md:rounded-2xl font-black text-[11px] md:text-xl uppercase shadow-lg active:scale-95 transition-all shrink-0">Tornar</button>
                         </div>
                     </header>
                     
@@ -596,44 +647,41 @@
                         ) : (
                             <>
                                 <aside 
-                                    className={`w-[130px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 md:p-4 flex flex-col shrink-0 backdrop-blur-sm transition-colors overflow-hidden ${personToMove ? 'bg-green-50/50' : ''}`}
+                                    className={`w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-1.5 md:p-4 flex flex-col shrink-0 backdrop-blur-sm transition-colors overflow-hidden ${personToMove ? 'bg-green-50/50' : ''}`}
                                     onDragOver={e=>e.preventDefault()} 
                                     onDrop={e => movePerson(e.dataTransfer.getData("p"), null)}
                                     onClick={() => handleBoxClick(null)}
                                 >
-                                    {/* GRUP PENDENTS */}
                                     <div className="flex flex-col min-h-0 shrink-0">
-                                        <h3 className="text-[14px] md:text-[18px] font-black uppercase mb-2 text-center tracking-[0.1em] text-orange-700/60 shrink-0 italic bg-orange-100/50 py-1.5 rounded-lg">Pendents</h3>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pb-2 px-1 max-h-[140px] md:max-h-[200px]">
+                                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-orange-700/60 shrink-0 italic bg-orange-100/50 py-1 rounded-lg">Pendents</h3>
+                                        <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-2 px-0.5 max-h-[120px] md:max-h-[200px]">
                                             {ALL_PEOPLE.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p])).map(p => (
                                                 <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
-                                                    className={`pointer-events-auto shrink-0 relative p-3 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[24px] font-black text-center cursor-grab border-2 border-transparent bg-white/40 hover:bg-white transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
+                                                    className={`pointer-events-auto shrink-0 relative p-2 md:p-4 rounded-lg md:rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab border-2 border-transparent bg-white/40 hover:bg-white transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
                                                     {p}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* GRUP MIRAR */}
-                                    <div className="flex flex-col mt-4 min-h-0 shrink-0">
-                                        <h3 className="text-[14px] md:text-[18px] font-black uppercase mb-2 text-center tracking-[0.1em] text-blue-700/60 shrink-0 italic bg-blue-100/50 py-1.5 rounded-lg flex items-center justify-center gap-2"><Icon name="eye" size={14}/> Mirar</h3>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar pb-2 px-1 max-h-[140px] md:max-h-[200px]">
+                                    <div className="flex flex-col mt-3 min-h-0 shrink-0">
+                                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700/60 shrink-0 italic bg-blue-100/50 py-1 rounded-lg flex items-center justify-center gap-1"><Icon name="eye" size={12}/> Mirar</h3>
+                                        <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-2 px-0.5 max-h-[120px] md:max-h-[200px]">
                                             {ALL_PEOPLE.filter(p => attendance[p] === 'blue').map(p => (
                                                 <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
-                                                    className={`pointer-events-auto shrink-0 relative p-3 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[24px] font-black text-center cursor-grab border-2 border-transparent bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
+                                                    className={`pointer-events-auto shrink-0 relative p-2 md:p-4 rounded-lg md:rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab border-2 border-transparent bg-blue-100 text-blue-700 hover:bg-blue-200 transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
                                                     {p}
                                                 </div>
                                             ))}
                                         </div>
                                     </div>
 
-                                    {/* GRUP NO PODEN */}
-                                    <div className="flex flex-col mt-4 min-h-0 shrink-0">
-                                        <h3 className="text-[14px] md:text-[18px] font-black uppercase mb-2 text-center tracking-[0.1em] text-red-600/50 shrink-0 italic bg-red-50 py-1.5 rounded-lg">No Poden</h3>
-                                        <div className="flex flex-col gap-2 overflow-y-auto custom-scrollbar px-1 max-h-[140px] md:max-h-[200px]">
+                                    <div className="flex flex-col mt-3 min-h-0 shrink-0">
+                                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-red-600/50 shrink-0 italic bg-red-50 py-1 rounded-lg">No Poden</h3>
+                                        <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar px-0.5 max-h-[120px] md:max-h-[200px]">
                                             {ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
                                                 <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
-                                                    className={`pointer-events-auto shrink-0 relative p-2.5 md:p-4 rounded-lg md:rounded-xl text-[13px] md:text-[22px] font-black text-center cursor-grab border-2 border-transparent bg-red-100 text-red-600 hover:bg-red-200 transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
+                                                    className={`pointer-events-auto shrink-0 relative p-2 md:p-4 rounded-lg md:rounded-xl text-[12px] md:text-[22px] font-black text-center cursor-grab border-2 border-transparent bg-red-100 text-red-600 hover:bg-red-200 transition-all shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>
                                                     {p}
                                                 </div>
                                             ))}
@@ -642,15 +690,15 @@
                                     <div className="flex-1 min-h-0"></div>
                                 </aside>
 
-                                <main className="flex-1 p-1 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-[10px] md:gap-4 auto-rows-min md:auto-rows-fr overflow-y-auto custom-scrollbar content-start">
+                                <main className="flex-1 p-1 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-[8px] md:gap-4 auto-rows-min md:auto-rows-fr overflow-y-auto custom-scrollbar content-start">
                                     {INSTRUMENTS.map(inst => (
                                         <div key={inst} onDragOver={e=>e.preventDefault()} onDrop={e => movePerson(e.dataTransfer.getData("p"), inst)} onClick={() => handleBoxClick(inst)}
-                                            className={`bg-white/40 rounded-xl md:rounded-[2rem] p-1.5 md:p-4 flex flex-col min-h-0 border border-white/40 shadow-inner transition-colors h-[120px] md:h-auto ${personToMove ? 'hover:bg-green-100 cursor-pointer border-green-400' : ''}`}>
-                                            <h3 className="text-[18px] md:text-[14px] font-black uppercase mb-1 md:mb-3 border-b-2 border-green-900/10 shrink-0 italic tracking-widest">{inst}</h3>
+                                            className={`bg-white/40 rounded-xl md:rounded-[2rem] p-1.5 md:p-4 flex flex-col min-h-0 border border-white/40 shadow-inner transition-colors h-[110px] md:h-auto ${personToMove ? 'hover:bg-green-100 cursor-pointer border-green-400' : ''}`}>
+                                            <h3 className="text-[16px] md:text-[14px] font-black uppercase mb-1 md:mb-3 border-b-2 border-green-900/10 shrink-0 italic tracking-widest">{inst}</h3>
                                             <div className="flex-1 flex flex-wrap gap-1 md:gap-2 content-start overflow-y-auto custom-scrollbar pointer-events-none">
                                                 {ALL_PEOPLE.filter(p => assignments[p] === inst).map(p => (
                                                     <div key={p} draggable onDragStart={e => { e.dataTransfer.setData("p", p); setPersonToMove(null); }} onClick={(e) => handlePersonSelection(e, p)}
-                                                        className={`pointer-events-auto relative px-2 py-0.5 rounded-md font-black text-[13px] md:text-[26px] tracking-tighter cursor-grab active:cursor-grabbing hover:scale-105 transition-all leading-none ${attendance[p] === 'green' ? 'text-green-700 font-black' : 'text-gray-500'} ${personToMove === p ? 'person-selected' : ''}`}>
+                                                        className={`pointer-events-auto relative px-1.5 py-0.5 rounded-md font-black text-[12px] md:text-[26px] tracking-tighter cursor-grab active:cursor-grabbing hover:scale-105 transition-all leading-none ${attendance[p] === 'green' ? 'text-green-700 font-black' : 'text-gray-500'} ${personToMove === p ? 'person-selected' : ''}`}>
                                                         {p}
                                                     </div>
                                                 ))}
@@ -661,30 +709,64 @@
                             </>
                         )}
                     </div>
+
+                    {/* MODAL INFO EXTRA */}
+                    {showInfoModal && (
+                        <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[150]">
+                            <div className="bg-white p-8 md:p-12 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl w-full max-w-2xl border-b-[12px] border-blue-600 max-h-[90dvh] flex flex-col">
+                                <h3 className="text-2xl md:text-3xl font-black mb-6 uppercase tracking-tighter italic flex items-center gap-3">
+                                    <Icon name="info" size={24} className="text-blue-600"/> Informació Detallada
+                                </h3>
+                                
+                                <div className="flex-1 overflow-y-auto custom-scrollbar mb-8">
+                                    {isAdminAuth ? (
+                                        <textarea 
+                                            className="w-full h-full p-6 bg-gray-50 rounded-2xl md:rounded-3xl border-2 border-gray-100 focus:border-blue-500 outline-none font-bold text-lg md:text-xl leading-relaxed resize-none"
+                                            placeholder="Escriu aquí les instruccions detallades per la colla..."
+                                            value={infoEditContent}
+                                            onChange={(e) => setInfoEditContent(e.target.value)}
+                                        />
+                                    ) : (
+                                        <div className="p-6 bg-blue-50 rounded-2xl md:rounded-3xl font-bold text-lg md:text-xl leading-relaxed text-blue-900 whitespace-pre-wrap border-2 border-blue-100">
+                                            {selectedBolo.info || "No hi ha informació addicional disponible."}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="flex gap-4">
+                                    {isAdminAuth && (
+                                        <button onClick={saveInfoExtra} className="flex-1 bg-green-600 text-white py-4 md:py-5 rounded-xl md:rounded-2xl font-black uppercase tracking-widest shadow-lg text-sm md:text-xl active:scale-95 transition-all">Guardar</button>
+                                    )}
+                                    <button onClick={() => setShowInfoModal(false)} className="flex-1 bg-gray-100 text-gray-500 py-4 md:py-5 rounded-xl md:rounded-2xl font-black uppercase tracking-widest text-sm md:text-xl active:scale-95 transition-all">Tancar</button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* BARRA DE MOVIMENT (Bottom Sheet) */}
                     {personToMove && (
-                        <div className="fixed bottom-2 md:bottom-4 left-[130px] md:left-80 right-0 z-[100] flex justify-center pointer-events-none animate-in slide-in-from-bottom duration-300">
-                            <div className="pointer-events-auto bg-green-600 text-white px-3 py-2 md:px-8 md:py-4 rounded-3xl shadow-2xl font-black text-[10px] md:text-[14px] uppercase tracking-widest flex items-center gap-2 md:gap-6 border border-white/20">
-                                <span className="hidden lg:inline">Selecciona destí per a {personToMove}</span>
-                                <span className="lg:hidden">Moure {personToMove}:</span>
+                        <div className="fixed bottom-2 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-in slide-in-from-bottom duration-300">
+                            <div className="pointer-events-auto bg-green-600 text-white px-3 py-2 md:px-8 md:py-4 rounded-[2rem] shadow-2xl font-black text-[10px] md:text-[14px] uppercase tracking-widest flex flex-col items-center gap-2 border border-white/20">
+                                <span className="opacity-80">Moure {personToMove}:</span>
                                 
                                 <div className="flex items-center gap-1.5 md:gap-3">
                                     <button onClick={(e) => { e.stopPropagation(); setPersonStatus(personToMove, 'blue'); }}
-                                        className="bg-blue-600 hover:bg-blue-700 px-2 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95 flex items-center gap-1.5">
-                                        <Icon name="eye" size={14}/> <span className="hidden md:inline">MIRAR</span>
+                                        className="bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95 flex items-center gap-1.5">
+                                        <Icon name="eye" size={14}/> <span>MIRAR</span>
                                     </button>
                                     
                                     <button onClick={(e) => { e.stopPropagation(); setPersonStatus(personToMove, 'red'); }}
-                                        className="bg-red-700 hover:bg-red-800 px-2 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">
+                                        className="bg-red-700 hover:bg-red-800 px-2.5 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">
                                         NO PUC
                                     </button>
 
                                     <button onClick={(e) => { e.stopPropagation(); setPersonStatus(personToMove, 'black'); }}
-                                        className="bg-orange-500 hover:bg-orange-600 px-2 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">
+                                        className="bg-orange-500 hover:bg-orange-600 px-2.5 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">
                                         PENDENT
                                     </button>
+                                    
+                                    <button onClick={(e) => { e.stopPropagation(); setPersonToMove(null); }} className="bg-black/20 hover:bg-black/40 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors font-bold text-xl ml-2">×</button>
                                 </div>
-
-                                <button onClick={(e) => { e.stopPropagation(); setPersonToMove(null); }} className="bg-black/20 hover:bg-black/40 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors font-bold text-xl md:text-2xl">×</button>
                             </div>
                         </div>
                     )}
