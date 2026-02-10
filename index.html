@@ -399,41 +399,36 @@
                             <h4 className={`text-[20px] md:text-3xl font-black leading-tight tracking-tighter italic ${pasado ? 'text-slate-600' : 'text-green-900'}`}>{b.nombre}</h4>
                             
                             <div className="flex flex-col gap-y-1 md:gap-y-3 opacity-80 font-black text-xs md:text-2xl uppercase tracking-wider mt-2 md:mt-4">
-                                {/* Linia 1: Data */}
                                 <span className="flex items-center gap-1.5 md:gap-3"><Icon name="calendar" size={18}/> {b.fecha || '---'}</span>
-                                
-                                {/* Linia 2: Hora i Durada */}
                                 <div className="flex items-center gap-x-4 md:gap-x-8">
                                     <span className="flex items-center gap-1.5 md:gap-3"><Icon name="clock" size={18}/> {b.hora || '---'}</span>
                                     <span className="flex items-center gap-1.5 md:gap-3"><Icon name="hourglass" size={18}/> {b.duracion || '---'}</span>
                                 </div>
-
-                                {/* Linia 3: Lloc */}
                                 <span className="flex items-center gap-1.5 md:gap-3"><Icon name="map-pin" size={18}/> {b.lugar || 'Ubicació'}</span>
                                 
-                                {/* Linia 4: Botons/Indicadors */}
-                                <div className="flex flex-row gap-1 md:gap-4 mt-2 md:mt-4 w-full flex-nowrap md:flex-wrap items-center overflow-x-hidden">
-                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
+                                {/* BOTONS A TOTA AMPLADA */}
+                                <div className="flex flex-row gap-1 md:gap-4 mt-3 md:mt-4 w-full justify-between items-stretch">
+                                    <div className={`flex-1 px-1 py-1.5 md:px-4 md:py-2 rounded-full flex items-center justify-center gap-1 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
                                         <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-green-500"></span>
                                         {b.memberCount || 0} OK
-                                    </span>
-                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
+                                    </div>
+                                    <div className={`flex-1 px-1 py-1.5 md:px-4 md:py-2 rounded-full flex items-center justify-center gap-1 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
                                         <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-orange-400"></span>
                                         {b.pendingCount || 0} ?
-                                    </span>
-                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
+                                    </div>
+                                    <div className={`flex-1 px-1 py-1.5 md:px-4 md:py-2 rounded-full flex items-center justify-center gap-1 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
                                         <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-red-500"></span>
                                         {b.declinedCount || 0} NO
-                                    </span>
-                                    <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[10px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-blue-100 text-blue-700 border-2 border-blue-200'}`}>
-                                        <Icon name="eye" size={12} className="text-blue-500"/>
+                                    </div>
+                                    <div className={`flex-1 px-1 py-1.5 md:px-4 md:py-2 rounded-full flex items-center justify-center gap-1 md:gap-3 transition-colors text-[11px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-blue-100 text-blue-700 border-2 border-blue-200'}`}>
+                                        <Icon name="eye" size={14} className="text-blue-500"/>
                                         {b.watchingCount || 0}
-                                    </span>
-                                    {hasInfo && (
-                                        <span className={`px-1.5 py-1 md:px-4 md:py-2 rounded-full flex items-center gap-1 md:gap-3 transition-colors text-[9px] md:text-xl ${pasado ? 'bg-slate-400' : 'bg-blue-700'} text-white font-black shrink-0`}>
-                                            <Icon name="info" size={10}/> +INFO
-                                        </span>
-                                    )}
+                                    </div>
+                                    
+                                    {/* BOTÓ +INFO (Transparent si no hi ha dades) */}
+                                    <div className={`flex-1 px-1 py-1.5 md:px-4 md:py-2 rounded-full flex items-center justify-center gap-1 md:gap-3 transition-colors text-[11px] md:text-xl font-black ${hasInfo ? (pasado ? 'bg-slate-400' : 'bg-blue-700') : 'opacity-5 bg-gray-400'} text-white`}>
+                                        <Icon name="info" size={12}/> {hasInfo ? '+INFO' : 'INFO'}
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -488,9 +483,7 @@
                             </div>
                         </header>
                         <main className="flex-1 p-2 md:p-8 flex flex-col items-center overflow-hidden">
-                            {/* He reduït p-3 md:p-8 a p-2 md:p-8 per mòbil */}
                             <div className="w-full max-w-5xl bg-white/40 rounded-[2rem] md:rounded-[3rem] p-2 md:p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
-                                
                                 <div className="flex-1 overflow-y-auto pr-1 md:pr-3 custom-scrollbar space-y-8 md:y-12">
                                     <section>
                                         <h3 className="text-2xl md:text-4xl font-black mb-4 md:mb-6 uppercase border-b border-green-900/10 pb-2 md:pb-4 italic tracking-tighter">Propers Bolos</h3>
@@ -500,7 +493,6 @@
                                             ) : futureBolos.map(renderBoloCard)}
                                         </div>
                                     </section>
-
                                     <section>
                                         <h3 className="text-2xl md:text-4xl font-black mb-4 md:mb-6 uppercase border-b border-green-900/10 pb-2 md:pb-4 italic tracking-tighter opacity-40">Bolos Passats</h3>
                                         <div className="space-y-3 md:space-y-4">
@@ -510,7 +502,6 @@
                                         </div>
                                     </section>
                                 </div>
-
                                 {isAdminAuth && bolos.length > 0 && (
                                     <div className="mt-4 md:mt-8 flex gap-4 md:gap-6 shrink-0">
                                         <div onDragOver={e=>e.preventDefault()} onDrop={e => handleEditBolo(e.dataTransfer.getData("id"))} className="flex-1 p-4 md:p-6 border-4 border-dashed border-blue-400 rounded-[1.5rem] md:rounded-[2rem] flex flex-col items-center text-blue-600 hover:bg-blue-50 transition-colors">
@@ -523,8 +514,7 @@
                                 )}
                             </div>
                         </main>
-                        
-                        {/* Modals de canvi pass i edició (sense canvis de layout) */}
+                        {/* Modals de canvi pass i edició */}
                         {isChangingPass && (
                             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[110]">
                                 <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-md border-b-[12px] border-blue-600">
@@ -540,7 +530,6 @@
                                 </div>
                             </div>
                         )}
-
                         {showBoloModal && (
                             <div className="fixed inset-0 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 z-[100]">
                                 <div className="bg-white p-10 rounded-[3rem] shadow-2xl w-full max-lg border-b-[12px] border-green-600">
@@ -592,7 +581,7 @@
 
             return (
                 <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
-                    <header className="px-4 py-3 md:px-6 md:py-4 bg-white/30 backdrop-blur-md flex flex-col justify-between shrink-0 border-b border-white/20 gap-2 md:gap-4">
+                    <header className="px-3 py-3 md:px-6 md:py-4 bg-white/30 backdrop-blur-md flex flex-col justify-between shrink-0 border-b border-white/20 gap-2 md:gap-4">
                         <div className="flex flex-col w-full md:w-auto">
                             <h2 className="text-xl md:text-4xl font-black uppercase italic leading-none tracking-tighter">{selectedBolo.nombre}</h2>
                             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 md:mt-3 opacity-60 font-black text-[10px] md:text-xl uppercase tracking-widest">
@@ -602,37 +591,35 @@
                             </div>
                         </div>
 
-                        {/* Fila compacta per mòbil */}
+                        {/* FILA DE BOTONS A DETALL (TOTA AMPLADA) */}
                         <div className="flex items-center justify-between w-full gap-1.5 md:gap-3">
-                            <div className="flex items-center bg-black/5 rounded-xl md:rounded-2xl px-1.5 py-1 md:px-6 md:py-3 gap-1.5 md:gap-6 flex-1 justify-around">
-                                <div className="text-center">
+                            <div className="flex items-center bg-black/5 rounded-xl md:rounded-2xl p-1 md:px-6 md:py-3 gap-1 md:gap-6 flex-1 justify-around items-stretch">
+                                <div className="text-center flex-1">
                                     <div className="text-sm md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
-                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50">OK</div>
+                                    <div className="text-[9px] md:text-base font-black uppercase opacity-50">OK</div>
                                 </div>
-                                <div className="text-center">
+                                <div className="text-center flex-1">
                                     <div className="text-sm md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
-                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50">?</div>
+                                    <div className="text-[9px] md:text-base font-black uppercase opacity-50">?</div>
                                 </div>
-                                <div className="text-center">
+                                <div className="text-center flex-1">
                                     <div className="text-sm md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
-                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50">NO</div>
+                                    <div className="text-[9px] md:text-base font-black uppercase opacity-50">NO</div>
                                 </div>
-                                <div className="text-center">
+                                <div className="text-center flex-1">
                                     <div className="text-sm md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
-                                    <div className="text-[8px] md:text-base font-black uppercase opacity-50 leading-none"><Icon name="eye" size={10} className="mx-auto mt-0.5"/></div>
+                                    <div className="text-[9px] md:text-base font-black uppercase opacity-50 flex items-center justify-center"><Icon name="eye" size={12}/></div>
                                 </div>
-                                {/* BOTÓ +INFO integrat al resum en mòbil */}
-                                {(isAdminAuth || hasInfo) && (
-                                    <button 
-                                        onClick={handleInfoClick}
-                                        className={`${pasado ? 'bg-slate-400' : 'bg-blue-700'} text-white px-1.5 py-1 rounded-lg font-black text-[8px] md:text-xl uppercase flex items-center gap-1 shadow-sm`}
-                                    >
-                                        <Icon name="info" size={10}/> INFO
-                                    </button>
-                                )}
+                                {/* BOTÓ +INFO (Transparent si no hi ha dades) */}
+                                <button 
+                                    onClick={handleInfoClick}
+                                    className={`${hasInfo ? (pasado ? 'bg-slate-400' : 'bg-blue-700') : 'opacity-10 bg-gray-400 pointer-events-none'} text-white px-2 py-1.5 rounded-lg font-black text-[10px] md:text-xl uppercase flex items-center justify-center gap-1 shadow-sm flex-1`}
+                                >
+                                    <Icon name="info" size={10}/> INFO
+                                </button>
                             </div>
 
-                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-3 py-2 md:px-8 md:py-3 rounded-lg md:rounded-2xl font-black text-[11px] md:text-xl uppercase shadow-lg active:scale-95 transition-all shrink-0">Tornar</button>
+                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-3 py-2 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-[11px] md:text-xl uppercase shadow-xl active:scale-95 transition-all shrink-0">Tornar</button>
                         </div>
                     </header>
                     
@@ -663,7 +650,6 @@
                                             ))}
                                         </div>
                                     </div>
-
                                     <div className="flex flex-col mt-3 min-h-0 shrink-0">
                                         <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700/60 shrink-0 italic bg-blue-100/50 py-1 rounded-lg flex items-center justify-center gap-1"><Icon name="eye" size={12}/> Mirar</h3>
                                         <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-2 px-0.5 max-h-[120px] md:max-h-[200px]">
@@ -675,7 +661,6 @@
                                             ))}
                                         </div>
                                     </div>
-
                                     <div className="flex flex-col mt-3 min-h-0 shrink-0">
                                         <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-red-600/50 shrink-0 italic bg-red-50 py-1 rounded-lg">No Poden</h3>
                                         <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar px-0.5 max-h-[120px] md:max-h-[200px]">
@@ -689,7 +674,6 @@
                                     </div>
                                     <div className="flex-1 min-h-0"></div>
                                 </aside>
-
                                 <main className="flex-1 p-1 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-[8px] md:gap-4 auto-rows-min md:auto-rows-fr overflow-y-auto custom-scrollbar content-start">
                                     {INSTRUMENTS.map(inst => (
                                         <div key={inst} onDragOver={e=>e.preventDefault()} onDrop={e => movePerson(e.dataTransfer.getData("p"), inst)} onClick={() => handleBoxClick(inst)}
@@ -717,7 +701,6 @@
                                 <h3 className="text-2xl md:text-3xl font-black mb-6 uppercase tracking-tighter italic flex items-center gap-3">
                                     <Icon name="info" size={24} className="text-blue-600"/> Informació Detallada
                                 </h3>
-                                
                                 <div className="flex-1 overflow-y-auto custom-scrollbar mb-8">
                                     {isAdminAuth ? (
                                         <textarea 
@@ -732,7 +715,6 @@
                                         </div>
                                     )}
                                 </div>
-
                                 <div className="flex gap-4">
                                     {isAdminAuth && (
                                         <button onClick={saveInfoExtra} className="flex-1 bg-green-600 text-white py-4 md:py-5 rounded-xl md:rounded-2xl font-black uppercase tracking-widest shadow-lg text-sm md:text-xl active:scale-95 transition-all">Guardar</button>
@@ -743,28 +725,24 @@
                         </div>
                     )}
 
-                    {/* BARRA DE MOVIMENT (Bottom Sheet) */}
+                    {/* BARRA DE MOVIMENT */}
                     {personToMove && (
                         <div className="fixed bottom-2 left-0 right-0 z-[100] flex justify-center pointer-events-none animate-in slide-in-from-bottom duration-300">
                             <div className="pointer-events-auto bg-green-600 text-white px-3 py-2 md:px-8 md:py-4 rounded-[2rem] shadow-2xl font-black text-[10px] md:text-[14px] uppercase tracking-widest flex flex-col items-center gap-2 border border-white/20">
                                 <span className="opacity-80">Moure {personToMove}:</span>
-                                
                                 <div className="flex items-center gap-1.5 md:gap-3">
                                     <button onClick={(e) => { e.stopPropagation(); setPersonStatus(personToMove, 'blue'); }}
                                         className="bg-blue-600 hover:bg-blue-700 px-2.5 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95 flex items-center gap-1.5">
                                         <Icon name="eye" size={14}/> <span>MIRAR</span>
                                     </button>
-                                    
                                     <button onClick={(e) => { e.stopPropagation(); setPersonStatus(personToMove, 'red'); }}
                                         className="bg-red-700 hover:bg-red-800 px-2.5 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">
                                         NO PUC
                                     </button>
-
                                     <button onClick={(e) => { e.stopPropagation(); setPersonStatus(personToMove, 'black'); }}
                                         className="bg-orange-500 hover:bg-orange-600 px-2.5 py-1.5 md:px-4 md:py-3 rounded-xl border border-white/20 transition-colors shadow-lg active:scale-95">
                                         PENDENT
                                     </button>
-                                    
                                     <button onClick={(e) => { e.stopPropagation(); setPersonToMove(null); }} className="bg-black/20 hover:bg-black/40 w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-colors font-bold text-xl ml-2">×</button>
                                 </div>
                             </div>
