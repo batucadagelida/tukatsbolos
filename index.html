@@ -406,27 +406,27 @@
                                 </div>
                                 <span className="flex items-center gap-2 md:gap-3"><Icon name="map-pin" size={20}/> {b.lugar || 'Ubicació'}</span>
                                 
-                                {/* BOTONS A TOTA AMPLADA EN MÒBIL */}
+                                {/* BOTONS A TOTA AMPLADA EN MÒBIL - DISTRIBUCIÓ 100% */}
                                 <div className="flex flex-row gap-1.5 md:gap-4 mt-3 md:mt-4 w-full justify-between items-stretch">
-                                    <div className={`flex-1 px-1 py-2 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[12px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
+                                    <div className={`flex-1 px-1 py-2.5 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-200 text-slate-500' : 'bg-green-100 text-green-700 border-2 border-green-200'}`}>
                                         <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-green-500"></span>
                                         <span>{b.memberCount || 0} OK</span>
                                     </div>
-                                    <div className={`flex-1 px-1 py-2 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[12px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
+                                    <div className={`flex-1 px-1 py-2.5 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-orange-100 text-orange-700 border-2 border-orange-200'}`}>
                                         <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-orange-400"></span>
                                         <span>{b.pendingCount || 0} ?</span>
                                     </div>
-                                    <div className={`flex-1 px-1 py-2 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[12px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
+                                    <div className={`flex-1 px-1 py-2.5 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-red-100 text-red-700 border-2 border-red-200'}`}>
                                         <span className="w-1.5 h-1.5 md:w-3 md:h-3 rounded-full bg-red-500"></span>
                                         <span>{b.declinedCount || 0} NO</span>
                                     </div>
-                                    <div className={`flex-1 px-1 py-2 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[12px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-blue-100 text-blue-700 border-2 border-blue-200'}`}>
+                                    <div className={`flex-1 px-1 py-2.5 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[13px] md:text-xl ${pasado ? 'bg-slate-100 text-slate-400' : 'bg-blue-100 text-blue-700 border-2 border-blue-200'}`}>
                                         <Icon name="eye" size={16} className="text-blue-500"/>
                                         <span>{b.watchingCount || 0}</span>
                                     </div>
                                     
-                                    {/* BOTÓ +INFO (Sempre present per mantenir el layout) */}
-                                    <div className={`flex-1 px-1 py-2 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[12px] md:text-xl font-black ${hasInfo ? (pasado ? 'bg-slate-400' : 'bg-blue-700') : 'opacity-10 bg-gray-400'} text-white`}>
+                                    {/* BOTÓ +INFO (Persistent per layout uniforme) */}
+                                    <div className={`flex-1 px-1 py-2.5 md:px-4 md:py-2 rounded-full flex flex-col md:flex-row items-center justify-center gap-0.5 md:gap-3 transition-colors text-[13px] md:text-xl font-black ${hasInfo ? (pasado ? 'bg-slate-400' : 'bg-blue-700') : 'opacity-10 bg-gray-400'} text-white`}>
                                         <Icon name="info" size={16}/> <span>{hasInfo ? 'INFO' : 'INFO'}</span>
                                     </div>
                                 </div>
@@ -593,33 +593,33 @@
 
                         {/* FILA DE BOTONS A DETALL (TOTA AMPLADA) */}
                         <div className="flex items-center justify-between w-full gap-2 md:gap-3">
-                            <div className="flex items-center bg-black/5 rounded-xl md:rounded-2xl p-1.5 md:px-6 md:py-3 gap-1 md:gap-6 flex-1 justify-around items-stretch">
+                            <div className="flex items-center bg-black/5 rounded-xl md:rounded-2xl p-1.5 md:px-6 md:py-3 gap-1 md:gap-6 flex-1 justify-between items-stretch">
                                 <div className="text-center flex-1">
-                                    <div className="text-lg md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase opacity-50">OK</div>
+                                    <div className="text-xl md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase opacity-50">OK</div>
                                 </div>
                                 <div className="text-center flex-1">
-                                    <div className="text-lg md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase opacity-50">?</div>
+                                    <div className="text-xl md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase opacity-50">?</div>
                                 </div>
                                 <div className="text-center flex-1">
-                                    <div className="text-lg md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase opacity-50">NO</div>
+                                    <div className="text-xl md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase opacity-50">NO</div>
                                 </div>
                                 <div className="text-center flex-1">
-                                    <div className="text-lg md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
-                                    <div className="text-[10px] md:text-base font-black uppercase flex items-center justify-center pt-0.5"><Icon name="eye" size={14}/></div>
+                                    <div className="text-xl md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase flex items-center justify-center pt-0.5"><Icon name="eye" size={15}/></div>
                                 </div>
                                 {/* BOTÓ +INFO (Transparent si no hi ha dades) */}
                                 <button 
                                     onClick={handleInfoClick}
-                                    className={`${hasInfo ? (pasado ? 'bg-slate-400' : 'bg-blue-700') : 'opacity-10 bg-gray-400 pointer-events-none'} text-white px-2 py-1.5 rounded-lg font-black text-[11px] md:text-xl uppercase flex items-center justify-center gap-1 shadow-sm flex-1 transition-all`}
+                                    className={`${hasInfo ? (pasado ? 'bg-slate-400' : 'bg-blue-700') : 'opacity-10 bg-gray-400 pointer-events-none'} text-white px-2 py-2 rounded-lg font-black text-[13px] md:text-xl uppercase flex items-center justify-center gap-1 shadow-sm flex-1 transition-all`}
                                 >
-                                    <Icon name="info" size={12}/> INFO
+                                    <Icon name="info" size={14}/> INFO
                                 </button>
                             </div>
 
-                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-4 py-2.5 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-[13px] md:text-xl uppercase shadow-xl active:scale-95 transition-all shrink-0">Tornar</button>
+                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-4 py-2.5 md:px-8 md:py-3 rounded-xl md:rounded-2xl font-black text-[14px] md:text-xl uppercase shadow-xl active:scale-95 transition-all shrink-0">Tornar</button>
                         </div>
                     </header>
                     
