@@ -533,22 +533,31 @@
 
             const renderInstrumentsTab = () => (
                 <div className="flex-1 flex flex-row overflow-hidden">
-                    <aside className={`w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden`}>
-                        <div className="flex flex-col min-h-0">
-                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-orange-700/60 bg-orange-100/50 py-1 rounded-lg italic">Pendents</h3>
-                            <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-4">
+                    <aside className={`w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-y-auto custom-scrollbar`}>
+                        <div className="flex flex-col min-h-0 mb-4">
+                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-orange-700/60 bg-orange-100/50 py-1 rounded-lg italic shrink-0">Pendents</h3>
+                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar max-h-[160px] md:max-h-[280px]">
                                 {ALL_PEOPLE.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p])).map(p => (
                                     <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                                 ))}
                             </div>
                         </div>
-                        <div className="flex flex-col mt-3 min-h-0">
-                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700/60 bg-blue-100/50 py-1 rounded-lg italic">Mirar</h3>
-                            <div className="flex-1 flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-4">
+                        <div className="flex flex-col min-h-0 mb-4">
+                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700/60 bg-blue-100/50 py-1 rounded-lg italic shrink-0">Mirar</h3>
+                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar max-h-[160px] md:max-h-[280px]">
                                 {ALL_PEOPLE.filter(p => attendance[p] === 'blue').map(p => (
                                     <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-blue-100 text-blue-700 hover:bg-blue-200 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-blue-100 text-blue-700 hover:bg-blue-200 shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="flex flex-col min-h-0">
+                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-red-700/60 bg-red-100/50 py-1 rounded-lg italic shrink-0">No Puc</h3>
+                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar max-h-[160px] md:max-h-[280px]">
+                                {ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
+                                    <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
+                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-red-100 text-red-700 hover:bg-red-200 shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                                 ))}
                             </div>
                         </div>
