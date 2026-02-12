@@ -278,8 +278,8 @@
                 const hasInfo = b.info && b.info.trim().length > 0;
                 const pasado = esPasado(b);
                 
-                // Mida d'icones responsive: 13px en mòbil, 11px en desktop
-                const responsiveIconSize = window.innerWidth < 768 ? 13 : 11;
+                // Mida d'icones augmentada a 15px per a totes les plataformes
+                const responsiveIconSize = 15;
 
                 return (
                     <div key={b.id} onClick={() => { setSelectedBolo(b); setActiveTab('instruments'); }} 
@@ -301,23 +301,23 @@
                         <div className="flex flex-col gap-1 mt-1">
                             {/* Fila 1: Asistència */}
                             <div className="flex gap-1 w-full">
-                                <div className="flex-1 bg-green-100 text-green-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase">{b.memberCount || 0} OK</div>
-                                <div className="flex-1 bg-orange-100 text-orange-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase">{b.pendingCount || 0} ?</div>
-                                <div className="flex-1 bg-red-100 text-red-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase">{b.declinedCount || 0} NO</div>
-                                <div className="flex-1 bg-blue-100 text-blue-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase flex items-center justify-center gap-1">
+                                <div className="flex-1 bg-green-100 text-green-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase">{b.memberCount || 0} OK</div>
+                                <div className="flex-1 bg-orange-100 text-orange-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase">{b.pendingCount || 0} ?</div>
+                                <div className="flex-1 bg-red-100 text-red-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase">{b.declinedCount || 0} NO</div>
+                                <div className="flex-1 bg-blue-100 text-blue-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase flex items-center justify-center gap-1">
                                     <Icon name="eye" size={responsiveIconSize}/> {b.watchingCount || 0}
                                 </div>
                             </div>
                             
                             {/* Fila 2: Mòduls */}
                             <div className="flex gap-1 w-full">
-                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase flex items-center justify-center gap-1 transition-all ${hasInfo ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-600/5 text-blue-900/10'}`}>
+                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase flex items-center justify-center gap-1 transition-all ${hasInfo ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-600/5 text-blue-900/10'}`}>
                                     <Icon name="info" size={responsiveIconSize}/> INFO
                                 </div>
-                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase flex items-center justify-center gap-1 transition-all ${b.carsEnabled ? 'bg-amber-800 text-white shadow-md' : 'bg-amber-800/5 text-amber-900/10'}`}>
+                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase flex items-center justify-center gap-1 transition-all ${b.carsEnabled ? 'bg-amber-800 text-white shadow-md' : 'bg-amber-800/5 text-amber-900/10'}`}>
                                     <Icon name="car" size={responsiveIconSize}/> COTXES
                                 </div>
-                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] md:text-[11px] uppercase flex items-center justify-center gap-1 transition-all ${b.foodEnabled ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-600/5 text-purple-900/10'}`}>
+                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[15px] uppercase flex items-center justify-center gap-1 transition-all ${b.foodEnabled ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-600/5 text-purple-900/10'}`}>
                                     <Icon name="utensils" size={responsiveIconSize}/> MENJAR
                                 </div>
                             </div>
