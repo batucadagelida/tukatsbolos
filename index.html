@@ -606,11 +606,11 @@
             const renderCarsTab = () => (
                 <div className="flex-1 flex flex-row overflow-hidden">
                     <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden">
-                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic">Qui va (OK/Mirar)</h3>
+                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic shrink-0">Qui va (OK/Mirar)</h3>
                         <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
                             {availablePeople.filter(p => !carData.some(c => c.driver === p || c.passengers.includes(p))).map(p => (
                                 <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                             ))}
                         </div>
                     </aside>
@@ -648,13 +648,18 @@
                                                 newData[idx].driver = p;
                                                 syncBoloData({ carData: newData });
                                             }} onClick={() => {
-                                                if (!personToMove) return;
-                                                const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
-                                                newData[idx].driver = personToMove;
-                                                syncBoloData({ carData: newData });
-                                                setPersonToMove(null);
+                                                if (personToMove) {
+                                                    const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
+                                                    newData[idx].driver = personToMove;
+                                                    syncBoloData({ carData: newData });
+                                                    setPersonToMove(null);
+                                                } else if (car.driver) {
+                                                    const newData = [...carData];
+                                                    newData[idx].driver = null;
+                                                    syncBoloData({ carData: newData });
+                                                }
                                             }}
-                                            className="min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed border-amber-200 flex items-center justify-center font-black text-amber-900 text-sm">{car.driver || "BUIT"}</div>
+                                            className="min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed border-amber-200 flex items-center justify-center font-black text-amber-900 text-sm cursor-pointer hover:bg-white">{car.driver || "BUIT"}</div>
                                         </div>
                                         <div className="space-y-1">
                                             <div className="text-[9px] font-black uppercase opacity-50">Passatgers ({car.passengers.length}/{car.capacity - 1}):</div>
@@ -673,7 +678,7 @@
                                             }}
                                             className="min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed border-amber-100 flex flex-wrap gap-1 content-start font-black text-xs text-amber-800/70">
                                                 {car.passengers.map(p => (
-                                                    <span key={p} className="bg-amber-50 px-1 rounded" onClick={(e) => {
+                                                    <span key={p} className="bg-amber-50 px-1 rounded cursor-pointer hover:bg-red-100 transition-colors" onClick={(e) => {
                                                         e.stopPropagation();
                                                         const newData = [...carData];
                                                         newData[idx].passengers = newData[idx].passengers.filter(pass => pass !== p);
@@ -694,11 +699,11 @@
             const renderFoodTab = () => (
                 <div className="flex-1 flex flex-row overflow-hidden">
                     <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden">
-                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic">NO Menjo</h3>
+                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic shrink-0">NO Menjo</h3>
                         <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
                             {availablePeople.filter(p => !foodData.standard.includes(p) && !foodData.vegan.includes(p) && !foodData.glutenFree.includes(p) && !foodData.glutenFreeVegan.includes(p)).map(p => (
                                 <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                             ))}
                         </div>
                     </aside>
@@ -766,7 +771,7 @@
                                     <div className="text-[11px] md:text-base font-black uppercase opacity-50">OK</div>
                                 </div>
                                 <div className="text-center flex-1">
-                                    <div className="text-xl md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
+                                    <div className="text-xl md:text-2xl font-black none text-orange-600">{pendingCount}</div>
                                     <div className="text-[11px] md:text-base font-black uppercase opacity-50">?</div>
                                 </div>
                                 <div className="text-center flex-1">
@@ -817,6 +822,11 @@
                                         }} className="bg-gray-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase shadow-lg">No Menjo</button>
                                         <button onClick={() => setPersonToMove(null)} className="bg-black/40 px-3 py-2 rounded-xl font-black text-[10px] uppercase">Anul·lar</button>
                                     </>
+                                ) : activeTab === 'cars' ? (
+                                    <div className="flex flex-col items-center gap-2">
+                                        <span className="text-[14px] font-black text-center mb-1">Seleccionar com a conductor o passatger</span>
+                                        <button onClick={() => setPersonToMove(null)} className="bg-black/40 px-3 py-2 rounded-xl font-black text-[10px] uppercase">Anul·lar</button>
+                                    </div>
                                 ) : (
                                     <>
                                         <button onClick={() => { syncBoloData({ attendance: { ...attendance, [personToMove]: 'blue' }, assignments: { ...assignments, [personToMove]: null } }); setPersonToMove(null); }} className="bg-blue-600 px-3 py-2 rounded-xl font-black text-[10px] uppercase">Mirar</button>
