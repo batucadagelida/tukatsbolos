@@ -766,19 +766,19 @@
                         </div>
                         <div className="flex items-center justify-between w-full gap-2">
                             <div className="flex items-center bg-black/5 rounded-xl p-1.5 md:px-6 md:py-3 gap-1 md:gap-6 flex-1 justify-between items-stretch">
-                                <div className="text-center flex-1">
+                                <div className="text-center flex-1 flex flex-col justify-center">
                                     <div className="text-xl md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
                                     <div className="text-[11px] md:text-base font-black uppercase opacity-50">OK</div>
                                 </div>
-                                <div className="text-center flex-1">
-                                    <div className="text-xl md:text-2xl font-black none text-orange-600">{pendingCount}</div>
+                                <div className="text-center flex-1 flex flex-col justify-center">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
                                     <div className="text-[11px] md:text-base font-black uppercase opacity-50">?</div>
                                 </div>
-                                <div className="text-center flex-1">
+                                <div className="text-center flex-1 flex flex-col justify-center">
                                     <div className="text-xl md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
                                     <div className="text-[11px] md:text-base font-black uppercase opacity-50">NO</div>
                                 </div>
-                                <div className="text-center flex-1">
+                                <div className="text-center flex-1 flex flex-col justify-center">
                                     <div className="text-xl md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
                                     <div className="text-[11px] md:text-base font-black uppercase flex items-center justify-center pt-0.5"><Icon name="eye" size={15}/></div>
                                 </div>
