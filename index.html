@@ -385,10 +385,10 @@
                             <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight leading-none mt-1 opacity-90">{month}</span>
                         </div>
 
-                        {/* Pestanya de Preu: Exactament mateixa mida que la data */}
+                        {/* Pestanya de Preu: Mateixa amplada però meitat d'alçada que la data */}
                         {precio > 0 && (
-                            <div className={`absolute top-12 md:top-14 right-0 md:-right-2 w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-400 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
-                                <span className="text-[13px] md:text-[15px] font-black italic">{precio}€</span>
+                            <div className={`absolute top-12 md:top-14 right-0 md:-right-2 w-14 h-7 md:w-16 md:h-8 rounded-xl flex items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-400 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
+                                <span className="text-[12px] md:text-[14px] font-black italic">{precio}€</span>
                             </div>
                         )}
 
