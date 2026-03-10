@@ -553,186 +553,199 @@
                 );
             };
 
-            const renderCarsTab = () => (
-                <div className="flex-1 flex flex-row overflow-hidden">
-                    <aside 
-                        onClick={() => {
-                            if (personToMove) {
-                                const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
-                                syncBoloData({ carData: newData });
-                                setPersonToMove(null);
-                            }
-                        }}
-                        className={`w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden ${personToMove ? 'cursor-pointer hover:bg-green-100/30' : ''}`}
-                    >
-                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-green-100/50 py-1 rounded-lg italic shrink-0 text-green-800">
-                            {personToMove ? 'Tornar Aquí' : 'OK / Mirar'}
-                        </h3>
-                        <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
-                            {availablePeople.filter(p => !carData.some(c => c.driver === p || c.passengers.includes(p))).map(p => (
-                                <div key={p} 
-                                    onClick={(e) => { e.stopPropagation(); setPersonToMove(personToMove === p ? null : p); }}
-                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-pointer bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
-                            ))}
-                        </div>
-                    </aside>
-                    <main className="flex-1 p-2 md:p-4 overflow-y-auto custom-scrollbar pb-64">
-                        <div className="flex items-center justify-between mb-4 bg-white/40 p-3 rounded-2xl">
-                            <h3 className="text-xl font-black uppercase italic text-amber-900">Gestió de Cotxes</h3>
-                            {isAdminAuth && (
-                                <button onClick={() => syncBoloData({ boloSettings: { ...boloSettings, carsEnabled: !boloSettings.carsEnabled } })}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-sm ${boloSettings.carsEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                                    COTXES: {boloSettings.carsEnabled ? 'SI' : 'NO'}
-                                </button>
-                            )}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {carData.map((car, idx) => (
-                                <div key={car.id} className="bg-white/60 p-4 rounded-3xl shadow-md border border-white/40">
-                                    <div className="flex justify-between items-center mb-3">
-                                        <div className="flex items-center gap-2 font-black uppercase italic text-sm text-amber-900"><Icon name="car" size={18}/> COTXE {car.id}</div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] font-black opacity-40">PLACES:</span>
-                                            {/* Selector de places amb fletxes (apropiat per mòbil i escriptori) */}
-                                            <div className="flex items-center gap-1 bg-white/50 rounded-lg p-0.5 border border-amber-200">
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const newData = [...carData];
-                                                        newData[idx].capacity = Math.max(1, car.capacity - 1);
-                                                        syncBoloData({ carData: newData });
-                                                    }}
-                                                    className="w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-900 rounded-md hover:bg-amber-200 active:scale-90 transition-all"
-                                                >
-                                                    <Icon name="chevron-down" size={14} />
-                                                </button>
-                                                <span className="w-6 text-center font-black text-amber-900 text-sm">{car.capacity}</span>
-                                                <button 
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        const newData = [...carData];
-                                                        newData[idx].capacity = Math.min(9, car.capacity + 1);
-                                                        syncBoloData({ carData: newData });
-                                                    }}
-                                                    className="w-8 h-8 flex items-center justify-center bg-amber-100 text-amber-900 rounded-md hover:bg-amber-200 active:scale-90 transition-all"
-                                                >
-                                                    <Icon name="chevron-up" size={14} />
-                                                </button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-3">
-                                        <div className="space-y-1">
-                                            <div className="text-[9px] font-black uppercase opacity-50">Conductor:</div>
-                                            <div 
-                                                onClick={() => {
-                                                    if (personToMove) {
-                                                        const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
-                                                        newData[idx].driver = personToMove;
-                                                        syncBoloData({ carData: newData });
-                                                        setPersonToMove(null);
-                                                    } else if (car.driver) {
-                                                        setPersonToMove(car.driver);
-                                                    }
-                                                }}
-                                                className={`min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed flex items-center justify-center font-black text-amber-900 text-sm cursor-pointer transition-colors ${personToMove ? 'border-green-400 bg-green-50' : 'border-amber-200 hover:bg-white'}`}>
-                                                {car.driver || "BUIT"}
-                                            </div>
-                                        </div>
-                                        <div className="space-y-1">
-                                            <div className="text-[9px] font-black uppercase opacity-50">Passatgers:</div>
-                                            <div 
-                                                onClick={() => {
-                                                    if (personToMove) {
-                                                        if (car.passengers.length >= car.capacity - 1 || car.driver === personToMove) return;
-                                                        const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
-                                                        newData[idx].passengers.push(personToMove);
-                                                        syncBoloData({ carData: newData });
-                                                        setPersonToMove(null);
-                                                    }
-                                                }}
-                                                className={`min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed flex flex-wrap gap-1 font-black text-xs text-amber-800/70 cursor-pointer transition-colors ${personToMove ? 'border-green-300 bg-green-50' : 'border-amber-100'}`}>
-                                                {car.passengers.map(p => (
-                                                    <span key={p} 
-                                                        onClick={(e) => {
-                                                            if (!personToMove) {
-                                                                e.stopPropagation();
-                                                                setPersonToMove(p);
-                                                            }
-                                                        }}
-                                                        className={`bg-amber-50 px-1 rounded cursor-pointer hover:bg-green-100 transition-colors ${personToMove === p ? 'ring-2 ring-green-600' : ''}`}
-                                                    >
-                                                        {p}
-                                                    </span>
-                                                ))}
-                                                {car.passengers.length === 0 && car.capacity > 1 && !personToMove && <span className="opacity-30">BUIT</span>}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        {renderCarCostsTable()}
-                    </main>
-                </div>
-            );
+            const renderCarsTab = () => {
+                const totalAssignedToCars = carData.reduce((acc, car) => {
+                    return acc + (car.driver ? 1 : 0) + (car.passengers ? car.passengers.length : 0);
+                }, 0);
 
-            const renderFoodTab = () => (
-                <div className="flex-1 flex flex-row overflow-hidden">
-                    <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden">
-                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic shrink-0">Lliures</h3>
-                        <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
-                            {availablePeople.filter(p => !foodData.standard.includes(p) && !foodData.vegan.includes(p) && !foodData.glutenFree.includes(p) && !foodData.glutenFreeVegan.includes(p)).map(p => (
-                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)}
-                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
-                            ))}
-                        </div>
-                    </aside>
-                    <main className="flex-1 p-2 md:p-4 overflow-y-auto custom-scrollbar pb-64">
-                        <div className="flex items-center justify-between mb-4 bg-white/40 p-3 rounded-2xl">
-                            <h3 className="text-xl font-black uppercase italic text-purple-900">Gestió de Menjar</h3>
-                            {isAdminAuth && (
-                                <button onClick={() => syncBoloData({ boloSettings: { ...boloSettings, foodEnabled: !boloSettings.foodEnabled } })}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-sm ${boloSettings.foodEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
-                                    MENJAR: {boloSettings.foodEnabled ? 'SI' : 'NO'}
-                                </button>
-                            )}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {[
-                                { id: 'standard', label: 'MENJAR ESTÀNDARD', color: 'purple' },
-                                { id: 'vegan', label: 'VEGÀ / VEGETARIÀ', color: 'green' },
-                                { id: 'glutenFree', label: 'SENSE GLUTEN', color: 'blue' },
-                                { id: 'glutenFreeVegan', label: 'SENSE GLUTEN i VEGÀ', color: 'teal' }
-                            ].map(group => (
-                                <div key={group.id} onDragOver={e=>e.preventDefault()} onDrop={e => {
-                                    const p = e.dataTransfer.getData("p");
-                                    const newFD = { ...foodData };
-                                    Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== p));
-                                    newFD[group.id].push(p);
-                                    syncBoloData({ foodData: newFD });
-                                }} onClick={() => {
-                                    if (!personToMove) return;
-                                    const newFD = { ...foodData };
-                                    Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== personToMove));
-                                    newFD[group.id].push(personToMove);
-                                    syncBoloData({ foodData: newFD });
+                return (
+                    <div className="flex-1 flex flex-row overflow-hidden">
+                        <aside 
+                            onClick={() => {
+                                if (personToMove) {
+                                    const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
+                                    syncBoloData({ carData: newData });
                                     setPersonToMove(null);
-                                }}
-                                className={`bg-white/60 p-6 rounded-3xl shadow-md border border-white/40 min-h-[160px] ${personToMove ? 'cursor-pointer hover:bg-purple-100/40' : ''}`}>
-                                    <h4 className={`font-black uppercase italic mb-4 flex items-center gap-2 text-${group.color}-800`}><Icon name="utensils" size={18}/> {group.label}</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {(foodData[group.id] || []).map(p => (
-                                            <span key={p} onClick={(e) => { e.stopPropagation(); syncBoloData({ foodData: { ...foodData, [group.id]: foodData[group.id].filter(x => x !== p) } }); }}
-                                                className={`bg-${group.color}-100 text-${group.color}-900 px-3 py-1 rounded-full font-black text-sm md:text-xl cursor-pointer hover:bg-red-100`}>{p}</span>
-                                        ))}
+                                }
+                            }}
+                            className={`w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden ${personToMove ? 'cursor-pointer hover:bg-green-100/30' : ''}`}
+                        >
+                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-green-100/50 py-1 rounded-lg italic shrink-0 text-green-800">
+                                {personToMove ? 'Tornar Aquí' : 'OK / Mirar'}
+                            </h3>
+                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
+                                {availablePeople.filter(p => !carData.some(c => c.driver === p || c.passengers.includes(p))).map(p => (
+                                    <div key={p} 
+                                        onClick={(e) => { e.stopPropagation(); setPersonToMove(personToMove === p ? null : p); }}
+                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-pointer bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                ))}
+                            </div>
+                        </aside>
+                        <main className="flex-1 p-2 md:p-4 overflow-y-auto custom-scrollbar pb-64">
+                            <div className="flex items-center justify-between mb-4 bg-white/40 p-3 rounded-2xl">
+                                <h3 className="text-xl font-black uppercase italic text-amber-900">MEMBRES ASSIGNATS ({totalAssignedToCars})</h3>
+                                {isAdminAuth && (
+                                    <button onClick={() => syncBoloData({ boloSettings: { ...boloSettings, carsEnabled: !boloSettings.carsEnabled } })}
+                                        className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-sm ${boloSettings.carsEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                                        COTXES: {boloSettings.carsEnabled ? 'SI' : 'NO'}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {carData.map((car, idx) => (
+                                    <div key={car.id} className="bg-white/60 p-4 rounded-3xl shadow-md border border-white/40">
+                                        <div className="flex justify-between items-center mb-3">
+                                            <div className="flex items-center gap-2 font-black uppercase italic text-sm text-amber-900"><Icon name="car" size={18}/> COTXE {car.id}</div>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-[10px] font-black opacity-40">PLACES:</span>
+                                                <div className="flex items-center gap-1.5 bg-white/50 rounded-xl p-1 border border-amber-200 shadow-sm">
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newData = [...carData];
+                                                            newData[idx].capacity = Math.max(1, car.capacity - 1);
+                                                            syncBoloData({ carData: newData });
+                                                        }}
+                                                        className="w-10 h-10 flex items-center justify-center bg-amber-100 text-amber-900 rounded-lg hover:bg-amber-200 active:scale-90 transition-all shadow-sm"
+                                                    >
+                                                        <Icon name="chevron-down" size={16} />
+                                                    </button>
+                                                    <span className="w-8 text-center font-black text-amber-900 text-lg select-none">{car.capacity}</span>
+                                                    <button 
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            const newData = [...carData];
+                                                            newData[idx].capacity = Math.min(9, car.capacity + 1);
+                                                            syncBoloData({ carData: newData });
+                                                        }}
+                                                        className="w-10 h-10 flex items-center justify-center bg-amber-100 text-amber-900 rounded-lg hover:bg-amber-200 active:scale-90 transition-all shadow-sm"
+                                                    >
+                                                        <Icon name="chevron-up" size={16} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-3">
+                                            <div className="space-y-1">
+                                                <div className="text-[9px] font-black uppercase opacity-50">Conductor:</div>
+                                                <div 
+                                                    onClick={() => {
+                                                        if (personToMove) {
+                                                            const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
+                                                            newData[idx].driver = personToMove;
+                                                            syncBoloData({ carData: newData });
+                                                            setPersonToMove(null);
+                                                        } else if (car.driver) {
+                                                            setPersonToMove(car.driver);
+                                                        }
+                                                    }}
+                                                    className={`min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed flex items-center justify-center font-black text-amber-900 text-sm cursor-pointer transition-colors ${personToMove ? 'border-green-400 bg-green-50' : 'border-amber-200 hover:bg-white'}`}>
+                                                    {car.driver || "BUIT"}
+                                                </div>
+                                            </div>
+                                            <div className="space-y-1">
+                                                <div className="text-[9px] font-black uppercase opacity-50">Passatgers:</div>
+                                                <div 
+                                                    onClick={() => {
+                                                        if (personToMove) {
+                                                            if (car.passengers.length >= car.capacity - 1 || car.driver === personToMove) return;
+                                                            const newData = carData.map(c => ({...c, driver: c.driver === personToMove ? null : c.driver, passengers: c.passengers.filter(pass => pass !== personToMove)}));
+                                                            newData[idx].passengers.push(personToMove);
+                                                            syncBoloData({ carData: newData });
+                                                            setPersonToMove(null);
+                                                        }
+                                                    }}
+                                                    className={`min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed flex flex-wrap gap-1 font-black text-xs text-amber-800/70 cursor-pointer transition-colors ${personToMove ? 'border-green-300 bg-green-50' : 'border-amber-100'}`}>
+                                                    {car.passengers.map(p => (
+                                                        <span key={p} 
+                                                            onClick={(e) => {
+                                                                if (!personToMove) {
+                                                                    e.stopPropagation();
+                                                                    setPersonToMove(p);
+                                                                }
+                                                            }}
+                                                            className={`bg-amber-50 px-1 rounded cursor-pointer hover:bg-green-100 transition-colors ${personToMove === p ? 'ring-2 ring-green-600' : ''}`}
+                                                        >
+                                                            {p}
+                                                        </span>
+                                                    ))}
+                                                    {car.passengers.length === 0 && car.capacity > 1 && !personToMove && <span className="opacity-30">BUIT</span>}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                    </main>
-                </div>
-            );
+                                ))}
+                            </div>
+                            {renderCarCostsTable()}
+                        </main>
+                    </div>
+                );
+            };
+
+            const renderFoodTab = () => {
+                // Calcular el total de menjars sol·licitats
+                const totalFoodRequests = (foodData.standard?.length || 0) + 
+                                         (foodData.vegan?.length || 0) + 
+                                         (foodData.glutenFree?.length || 0) + 
+                                         (foodData.glutenFreeVegan?.length || 0);
+
+                return (
+                    <div className="flex-1 flex flex-row overflow-hidden">
+                        <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden">
+                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic shrink-0">Lliures</h3>
+                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
+                                {availablePeople.filter(p => !foodData.standard.includes(p) && !foodData.vegan.includes(p) && !foodData.glutenFree.includes(p) && !foodData.glutenFreeVegan.includes(p)).map(p => (
+                                    <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)}
+                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                                ))}
+                            </div>
+                        </aside>
+                        <main className="flex-1 p-2 md:p-4 overflow-y-auto custom-scrollbar pb-64">
+                            <div className="flex items-center justify-between mb-4 bg-white/40 p-3 rounded-2xl">
+                                <h3 className="text-xl font-black uppercase italic text-purple-900">MENJARS SOL·LICITATS ({totalFoodRequests})</h3>
+                                {isAdminAuth && (
+                                    <button onClick={() => syncBoloData({ boloSettings: { ...boloSettings, foodEnabled: !boloSettings.foodEnabled } })}
+                                        className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-sm ${boloSettings.foodEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                                        MENJAR: {boloSettings.foodEnabled ? 'SI' : 'NO'}
+                                    </button>
+                                )}
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {[
+                                    { id: 'standard', label: 'MENJAR ESTÀNDARD', color: 'purple' },
+                                    { id: 'vegan', label: 'VEGÀ / VEGETARIÀ', color: 'green' },
+                                    { id: 'glutenFree', label: 'SENSE GLUTEN', color: 'blue' },
+                                    { id: 'glutenFreeVegan', label: 'SENSE GLUTEN i VEGÀ', color: 'teal' }
+                                ].map(group => (
+                                    <div key={group.id} onDragOver={e=>e.preventDefault()} onDrop={e => {
+                                        const p = e.dataTransfer.getData("p");
+                                        const newFD = { ...foodData };
+                                        Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== p));
+                                        newFD[group.id].push(p);
+                                        syncBoloData({ foodData: newFD });
+                                    }} onClick={() => {
+                                        if (!personToMove) return;
+                                        const newFD = { ...foodData };
+                                        Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== personToMove));
+                                        newFD[group.id].push(personToMove);
+                                        syncBoloData({ foodData: newFD });
+                                        setPersonToMove(null);
+                                    }}
+                                    className={`bg-white/60 p-6 rounded-3xl shadow-md border border-white/40 min-h-[160px] ${personToMove ? 'cursor-pointer hover:bg-purple-100/40' : ''}`}>
+                                        <h4 className={`font-black uppercase italic mb-4 flex items-center gap-2 text-${group.color}-800`}><Icon name="utensils" size={18}/> {group.label}</h4>
+                                        <div className="flex flex-wrap gap-2">
+                                            {(foodData[group.id] || []).map(p => (
+                                                <span key={p} onClick={(e) => { e.stopPropagation(); syncBoloData({ foodData: { ...foodData, [group.id]: foodData[group.id].filter(x => x !== p) } }); }}
+                                                    className={`bg-${group.color}-100 text-${group.color}-900 px-3 py-1 rounded-full font-black text-sm md:text-xl cursor-pointer hover:bg-red-100`}>{p}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </main>
+                    </div>
+                );
+            };
 
             if (!isLoggedIn) return (
                 <div className="h-screen w-screen flex items-center justify-center p-4">
