@@ -57,6 +57,14 @@
         .overflow-y-auto, .overflow-x-auto {
             -webkit-overflow-scrolling: touch;
         }
+
+        .clickable-title {
+            transition: all 0.2s;
+        }
+        .clickable-title:hover {
+            filter: brightness(0.9);
+            transform: scale(1.02);
+        }
     </style>
 </head>
 <body>
@@ -164,11 +172,9 @@
 
             useEffect(() => {
                 if (!user) return;
-                
                 const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'config'), snap => {
                     if (snap.exists()) setSettings(snap.data());
-                }, (err) => console.error("Error settings:", err));
-
+                });
                 const unsubBolos = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bolos'), snap => {
                     const bolosList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setBolos(bolosList);
@@ -176,32 +182,25 @@
                         const updated = bolosList.find(d => d.id === selectedBolo.id);
                         if (updated) setSelectedBolo(updated);
                     }
-                }, (err) => console.error("Error bolos:", err));
-
+                });
                 return () => { unsubSettings(); unsubBolos(); };
             }, [user, selectedBolo?.id]);
 
             useEffect(() => {
                 if (!user || !selectedBolo) return;
                 setIsLoading(true);
-
                 const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', selectedBolo.id), snap => {
                     if (snap.exists()) {
                         const d = snap.data();
                         setAttendance(d.attendance || {});
                         setAssignments(d.assignments || {});
                         setCarData(d.carData || Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })));
-                        
                         const fd = d.foodData || {};
                         setFoodData({
-                            standard: fd.standard || [],
-                            vegan: fd.vegan || [],
-                            glutenFree: fd.glutenFree || [],
-                            glutenFreeVegan: fd.glutenFreeVegan || []
+                            standard: fd.standard || [], vegan: fd.vegan || [],
+                            glutenFree: fd.glutenFree || [], glutenFreeVegan: fd.glutenFreeVegan || []
                         });
-                        
                         setBoloSettings(d.boloSettings || { carsEnabled: false, foodEnabled: false });
-                        
                         const cc = d.carCosts || {};
                         setCarCosts({
                             enabled: cc.enabled || false,
@@ -212,17 +211,12 @@
                         });
                     }
                     setIsLoading(false);
-                }, (err) => {
-                    console.error("Error attendance:", err);
-                    setIsLoading(false);
                 });
-
                 return () => unsub();
             }, [user, selectedBolo?.id]);
 
             const syncBoloData = async (updates) => {
                 if (!user || !selectedBolo) return;
-                
                 const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', selectedBolo.id);
                 const boloRef = doc(db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id);
                 
@@ -230,15 +224,15 @@
                 const finalAss = updates.assignments || assignments;
                 const finalSettings = updates.boloSettings || boloSettings;
                 const finalCarCosts = updates.carCosts || carCosts;
-                let finalCarData = updates.carData || carData;
 
-                // Neteja automàtica de cotxes si algú ja no està confirmat o mirant
-                const validForCars = ALL_PEOPLE.filter(p => finalAss[p] !== null && finalAss[p] !== undefined || finalAtt[p] === 'blue');
+                // Neteja automàtica de cotxes si algú ja no és apte (no confirmat ni mirar)
+                let finalCarData = updates.carData || carData;
+                const validPeopleForCars = ALL_PEOPLE.filter(p => finalAss[p] !== null && finalAss[p] !== undefined || finalAtt[p] === 'blue');
                 
                 finalCarData = finalCarData.map(car => ({
                     ...car,
-                    driver: validForCars.includes(car.driver) ? car.driver : null,
-                    passengers: car.passengers.filter(p => validForCars.includes(p))
+                    driver: validPeopleForCars.includes(car.driver) ? car.driver : null,
+                    passengers: car.passengers.filter(p => validPeopleForCars.includes(p))
                 }));
 
                 const counts = {
@@ -250,18 +244,11 @@
 
                 try {
                     await updateDoc(docRef, { 
-                        attendance: finalAtt, 
-                        assignments: finalAss,
-                        carData: finalCarData,
-                        foodData: updates.foodData || foodData,
-                        boloSettings: finalSettings,
-                        carCosts: finalCarCosts
+                        attendance: finalAtt, assignments: finalAss,
+                        carData: finalCarData, foodData: updates.foodData || foodData,
+                        boloSettings: finalSettings, carCosts: finalCarCosts
                     });
-                    await updateDoc(boloRef, {
-                        ...counts,
-                        carsEnabled: !!finalSettings.carsEnabled,
-                        foodEnabled: !!finalSettings.foodEnabled
-                    });
+                    await updateDoc(boloRef, { ...counts, carsEnabled: !!finalSettings.carsEnabled, foodEnabled: !!finalSettings.foodEnabled });
                 } catch (e) { console.error(e); }
             };
 
@@ -272,10 +259,7 @@
                 return new Date(y, m - 1, d, hh, mm);
             };
 
-            const esPasado = (b) => {
-                const fechaBolo = getBoloDateTime(b);
-                return fechaBolo < new Date();
-            };
+            const esPasado = (b) => getBoloDateTime(b) < new Date();
 
             const getFormattedDateBadge = (fechaStr) => {
                 if (!fechaStr) return { day: "?", month: "?" };
@@ -305,21 +289,13 @@
             const handleSaveBolo = async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                const data = {
-                    nombre: formData.get('nombre'),
-                    fecha: formData.get('fecha'),
-                    hora: formData.get('hora'),
-                    duracion: formData.get('duracion'),
-                    lugar: formData.get('lugar')
-                };
-
+                const data = { nombre: formData.get('nombre'), fecha: formData.get('fecha'), hora: formData.get('hora'), duracion: formData.get('duracion'), lugar: formData.get('lugar') };
                 try {
                     if (editingBoloData) {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', editingBoloData.id), data);
                     } else {
                         const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'bolos'), {
-                            ...data,
-                            memberCount: 0, pendingCount: ALL_PEOPLE.length, declinedCount: 0, watchingCount: 0,
+                            ...data, memberCount: 0, pendingCount: ALL_PEOPLE.length, declinedCount: 0, watchingCount: 0,
                             info: "", carsEnabled: false, foodEnabled: false, precio: 0
                         });
                         await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', docRef.id), {
@@ -340,66 +316,27 @@
                 const formData = new FormData(e.target);
                 try {
                     await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'config'), {
-                        userPass: formData.get('userPass'),
-                        adminPass: formData.get('adminPass')
+                        userPass: formData.get('userPass'), adminPass: formData.get('adminPass')
                     });
                     setShowConfigModal(false);
                 } catch (err) { console.error(err); }
             };
 
-            // Llista de persones vàlides per als cotxes (Confirmats o Mirar)
+            // Només gent que ha triat instrument o "Mirar"
             const availablePeople = useMemo(() => {
                 return ALL_PEOPLE.filter(p => (assignments[p] && assignments[p] !== null) || attendance[p] === 'blue');
             }, [attendance, assignments]);
 
-            const renderBoloCard = (b) => {
-                const hasInfo = b.info && b.info.trim().length > 0;
-                const pasado = esPasado(b);
-                const { day, month } = getFormattedDateBadge(b.fecha);
-                const precio = b.precio || 0;
-
-                return (
-                    <div key={b.id} onClick={() => { setSelectedBolo(b); setActiveTab('instruments'); }} 
-                         className={`p-4 bg-white/70 rounded-3xl flex flex-col gap-2 shadow-md hover:border-green-500 border-2 border-transparent transition-all cursor-pointer relative group mt-4 mb-2 ${pasado ? 'opacity-50 grayscale-[20%]' : ''}`}>
-                        <div className={`absolute -top-4 right-0 md:-right-2 w-14 h-14 md:w-16 md:h-16 rounded-xl flex flex-col items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-500 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
-                            <span className="text-lg md:text-xl font-black leading-none">{day}</span>
-                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight leading-none mt-1 opacity-90">{month}</span>
-                        </div>
-                        {precio > 0 && (
-                            <div className={`absolute top-12 md:top-14 right-0 md:-right-2 w-14 h-7 md:w-16 md:h-8 rounded-xl flex items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-400 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
-                                <span className="text-[12px] md:text-[14px] font-black italic">{precio}€</span>
-                            </div>
-                        )}
-                        {isAdminAuth && (
-                            <div className="absolute -bottom-2 -left-2 flex gap-1 z-30">
-                                <button onClick={(e) => { e.stopPropagation(); setEditingBoloData(b); setShowBoloModal(true); }} className="p-2 bg-blue-100 text-blue-600 rounded-lg">
-                                    <Icon name="edit" size={14}/>
-                                </button>
-                                <button onClick={(e) => handleDeleteBolo(b.id, e)} className="p-2 bg-red-100 text-red-600 rounded-lg">
-                                    <Icon name="trash" size={14}/>
-                                </button>
-                            </div>
-                        )}
-                        <h4 className="text-2xl font-black italic text-green-900 leading-none mb-0.5 pr-14 md:pr-20">{b.nombre}</h4>
-                        <div className="flex flex-col gap-0.5 text-[15px] font-black opacity-70 tracking-normal">
-                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 leading-tight">
-                                <span className="flex items-center gap-1 uppercase"><Icon name="clock" size={15}/> {b.hora}</span>
-                                {b.duracion && <span className="flex items-center gap-1"><Icon name="hourglass" size={15}/> {b.duracion}</span>}
-                            </div>
-                            <span className="flex items-center gap-1 leading-tight uppercase"><Icon name="map-pin" size={15}/> {b.lugar}</span>
-                        </div>
-                        <div className="flex flex-col gap-1 mt-1">
-                            <div className="flex gap-1 w-full">
-                                <div className="flex-1 bg-green-100 text-green-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase">{b.memberCount || 0} OK</div>
-                                <div className="flex-1 bg-orange-100 text-orange-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase">{b.pendingCount || 0} ?</div>
-                                <div className="flex-1 bg-red-100 text-red-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase">{b.declinedCount || 0} NO</div>
-                                <div className="flex-1 bg-blue-100 text-blue-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1">
-                                    <Icon name="eye" size={15}/> {b.watchingCount || 0}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                );
+            const movePersonToCategory = (target) => {
+                if (!personToMove) return;
+                let newAtt = { ...attendance };
+                let newAss = { ...assignments };
+                if (target === 'pending') { delete newAtt[personToMove]; newAss[personToMove] = null; }
+                else if (target === 'blue') { newAtt[personToMove] = 'blue'; newAss[personToMove] = null; }
+                else if (target === 'red') { newAtt[personToMove] = 'red'; newAss[personToMove] = null; }
+                else { newAtt[personToMove] = 'green'; newAss[personToMove] = target; }
+                syncBoloData({ attendance: newAtt, assignments: newAss });
+                setPersonToMove(null);
             };
 
             const renderCarCostsTable = () => {
@@ -417,7 +354,6 @@
                 const totalMembresNum = carData.reduce((acc, c) => acc + (c.driver ? 1 : 0) + c.passengers.length, 0);
 
                 const totalCostCotxesNum = costGasolinaCotxe * totalCotxesNum;
-                const costPerMembreNum = totalMembresNum > 0 ? (totalCostCotxesNum / totalMembresNum) : 0;
                 const totalAportatNum = propostaNum * totalMembresNum;
                 const aportacioBatucadaNum = totalCostCotxesNum - totalAportatNum;
 
@@ -430,7 +366,7 @@
                                     <span className="text-[10px] md:text-xs font-black uppercase opacity-60">Visible Usuaris:</span>
                                     <button 
                                         onClick={() => syncBoloData({ carCosts: { ...carCosts, enabled: !carCosts.enabled } })}
-                                        className={`px-3 py-1.5 rounded-lg font-black text-xs uppercase transition-all shadow-sm ${carCosts.enabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}
+                                        className={`px-3 py-1.5 rounded-lg font-black text-xs uppercase shadow-sm ${carCosts.enabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}
                                     >
                                         {carCosts.enabled ? 'ON' : 'OFF'}
                                     </button>
@@ -439,11 +375,12 @@
                         </div>
                         
                         <div className="space-y-2 text-[13px] md:text-sm font-bold text-amber-950/80">
+                            {/* Distancia - Editable per admin */}
                             <div className="flex justify-between items-center bg-white/50 p-2.5 rounded-xl">
                                 <span>Distància BOLO Gelida-Destí:</span>
                                 <div className="flex items-center gap-1.5">
                                     {isAdminAuth ? (
-                                        <input type="number" value={carCosts.distancia} onChange={e => syncBoloData({ carCosts: { ...carCosts, distancia: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 font-black text-amber-900" />
+                                        <input type="number" value={carCosts.distancia} onChange={e => syncBoloData({ carCosts: { ...carCosts, distancia: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-200 focus:outline-none font-black text-amber-900" />
                                     ) : (
                                         <span className="font-black text-amber-900">{carCosts.distancia}</span>
                                     )}
@@ -456,11 +393,12 @@
                                 <span className="font-black text-amber-900">{distanciaTotal} Kms</span>
                             </div>
                             
+                            {/* Consum - Editable per admin */}
                             <div className="flex justify-between items-center bg-white/50 p-2.5 rounded-xl">
                                 <span>Consum mig per cotxe:</span>
                                 <div className="flex items-center gap-1.5">
                                     {isAdminAuth ? (
-                                        <input type="number" step="0.1" value={carCosts.consum} onChange={e => syncBoloData({ carCosts: { ...carCosts, consum: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 font-black text-amber-900" />
+                                        <input type="number" step="0.1" value={carCosts.consum} onChange={e => syncBoloData({ carCosts: { ...carCosts, consum: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-200 focus:outline-none font-black text-amber-900" />
                                     ) : (
                                         <span className="font-black text-amber-900">{carCosts.consum}</span>
                                     )}
@@ -468,13 +406,14 @@
                                 </div>
                             </div>
                             
+                            {/* Preu Litre - Editable per admin */}
                             <div className="flex justify-between items-center bg-white/50 p-2.5 rounded-xl">
                                 <span>Preu mig el litre:</span>
                                 <div className="flex items-center gap-1.5">
                                     {isAdminAuth ? (
-                                        <input type="number" step="0.01" value={carCosts.preuLitre} onChange={e => syncBoloData({ carCosts: { ...carCosts, preuLitre: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-200 focus:outline-none focus:border-amber-500 font-black text-amber-900" />
+                                        <input type="number" step="0.01" value={carCosts.preuLitre} onChange={e => syncBoloData({ carCosts: { ...carCosts, preuLitre: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-200 focus:outline-none font-black text-amber-900" />
                                     ) : (
-                                        <span className="font-black text-amber-900">{preuLitreNum.toFixed(2)}</span>
+                                        <span className="font-black text-amber-900">{Number(carCosts.preuLitre).toFixed(2)}</span>
                                     )}
                                     <span className="font-black">€</span>
                                 </div>
@@ -497,18 +436,14 @@
                                 <span className="font-black text-amber-900">{totalMembresNum}</span>
                             </div>
                             
-                            <div className="flex justify-between items-center bg-white/50 p-2.5 rounded-xl">
-                                <span>Cost per membre:</span>
-                                <span className="font-black text-amber-900">{costPerMembreNum.toFixed(2)} €</span>
-                            </div>
-                            
+                            {/* Proposta - Editable per admin */}
                             <div className="flex justify-between items-center bg-amber-200/50 p-3 rounded-xl font-black text-amber-900 border border-amber-300 my-2 shadow-sm">
                                 <span>PROPOSTA per membre pel bolo:</span>
                                 <div className="flex items-center gap-1.5">
                                     {isAdminAuth ? (
-                                        <input type="number" step="0.1" value={carCosts.proposta} onChange={e => syncBoloData({ carCosts: { ...carCosts, proposta: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-400 focus:outline-none focus:border-amber-600 font-black text-amber-900 shadow-inner" />
+                                        <input type="number" step="0.5" value={carCosts.proposta} onChange={e => syncBoloData({ carCosts: { ...carCosts, proposta: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-400 focus:outline-none font-black text-amber-900 shadow-inner" />
                                     ) : (
-                                        <span className="font-black text-amber-900">{propostaNum.toFixed(1)}</span>
+                                        <span className="font-black text-amber-900">{Number(carCosts.proposta).toFixed(1)}</span>
                                     )}
                                     <span className="font-black">€</span>
                                 </div>
@@ -535,35 +470,79 @@
                 );
             };
 
+            const renderBoloCard = (b) => {
+                const hasInfo = b.info && b.info.trim().length > 0;
+                const pasado = esPasado(b);
+                const { day, month } = getFormattedDateBadge(b.fecha);
+                const precio = b.precio || 0;
+
+                return (
+                    <div key={b.id} onClick={() => { setSelectedBolo(b); setActiveTab('instruments'); }} 
+                         className={`p-4 bg-white/70 rounded-3xl flex flex-col gap-2 shadow-md hover:border-green-500 border-2 border-transparent transition-all cursor-pointer relative group mt-4 mb-2 ${pasado ? 'opacity-50 grayscale-[20%]' : ''}`}>
+                        <div className={`absolute -top-4 right-0 md:-right-2 w-14 h-14 md:w-16 md:h-16 rounded-xl flex flex-col items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-500 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
+                            <span className="text-lg md:text-xl font-black leading-none">{day}</span>
+                            <span className="text-[9px] md:text-[10px] font-black uppercase tracking-tight leading-none mt-1 opacity-90">{month}</span>
+                        </div>
+                        {precio > 0 && (
+                            <div className={`absolute top-12 md:top-14 right-0 md:-right-2 w-14 h-7 md:w-16 md:h-8 rounded-xl flex items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-400 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
+                                <span className="text-[12px] md:text-[14px] font-black italic">{precio}€</span>
+                            </div>
+                        )}
+                        {isAdminAuth && (
+                            <div className="absolute -bottom-2 -left-2 flex gap-1 z-30">
+                                <button onClick={(e) => { e.stopPropagation(); setEditingBoloData(b); setShowBoloModal(true); }} className="p-2 bg-blue-100 text-blue-600 rounded-lg shadow-sm">
+                                    <Icon name="edit" size={14}/>
+                                </button>
+                                <button onClick={(e) => handleDeleteBolo(b.id, e)} className="p-2 bg-red-100 text-red-600 rounded-lg shadow-sm">
+                                    <Icon name="trash" size={14}/>
+                                </button>
+                            </div>
+                        )}
+                        <h4 className="text-2xl font-black italic text-green-900 leading-none mb-0.5 pr-14 md:pr-20">{b.nombre}</h4>
+                        <div className="flex flex-col gap-0.5 text-[15px] font-black opacity-70 tracking-normal">
+                            <div className="flex flex-wrap gap-x-4 gap-y-0.5 leading-tight">
+                                <span className="flex items-center gap-1 uppercase"><Icon name="clock" size={15}/> {b.hora}</span>
+                                {b.duracion && <span className="flex items-center gap-1"><Icon name="hourglass" size={15}/> {b.duracion}</span>}
+                            </div>
+                            <span className="flex items-center gap-1 leading-tight uppercase"><Icon name="map-pin" size={15}/> {b.lugar}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 mt-1">
+                            <div className="flex gap-1 w-full">
+                                <div className="flex-1 bg-green-100 text-green-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase">{b.memberCount || 0} OK</div>
+                                <div className="flex-1 bg-orange-100 text-orange-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase">{b.pendingCount || 0} ?</div>
+                                <div className="flex-1 bg-red-100 text-red-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase">{b.declinedCount || 0} NO</div>
+                                <div className="flex-1 bg-blue-100 text-blue-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1"><Icon name="eye" size={15}/> {b.watchingCount || 0}</div>
+                            </div>
+                            <div className="flex gap-1 w-full">
+                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${hasInfo ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-600/5 text-blue-900/10'}`}><Icon name="info" size={15}/> INFO</div>
+                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${b.carsEnabled ? 'bg-amber-800 text-white shadow-md' : 'bg-amber-800/5 text-amber-900/10'}`}><Icon name="car" size={15}/> COTXES</div>
+                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${b.foodEnabled ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-600/5 text-purple-900/10'}`}><Icon name="utensils" size={15}/> MENJAR</div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            };
+
             const renderInstrumentsTab = () => (
                 <div className="flex-1 flex flex-row overflow-hidden">
-                    <aside className={`w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-y-auto custom-scrollbar`}>
+                    <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
                         <div className="flex flex-col min-h-0 mb-4">
-                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-orange-700/60 bg-orange-100/50 py-1 rounded-lg italic shrink-0">Pendents</h3>
-                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar max-h-[160px] md:max-h-[280px]">
-                                {ALL_PEOPLE.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p])).map(p => (
-                                    <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
-                                ))}
-                            </div>
+                            <h3 onClick={() => movePersonToCategory('pending')} className={`text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-orange-700 bg-orange-100/50 py-1 rounded-lg italic shrink-0 ${personToMove ? 'clickable-title cursor-pointer' : ''}`}>Pendents</h3>
+                            <div className="flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p])).map(p => (
+                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)} className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                            ))}</div>
                         </div>
                         <div className="flex flex-col min-h-0 mb-4">
-                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700/60 bg-blue-100/50 py-1 rounded-lg italic shrink-0">Mirar</h3>
-                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar max-h-[160px] md:max-h-[280px]">
-                                {ALL_PEOPLE.filter(p => attendance[p] === 'blue').map(p => (
-                                    <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-blue-100 text-blue-700 hover:bg-blue-200 shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
-                                ))}
-                            </div>
+                            <h3 onClick={() => movePersonToCategory('blue')} className={`text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700 bg-blue-100/50 py-1 rounded-lg italic shrink-0 ${personToMove ? 'clickable-title cursor-pointer' : ''}`}>Mirar</h3>
+                            <div className="flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => attendance[p] === 'blue').map(p => (
+                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)} className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-blue-100 text-blue-700 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                            ))}</div>
                         </div>
-                        <div className="flex flex-col min-h-0">
-                            <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-red-700/60 bg-red-100/50 py-1 rounded-lg italic shrink-0">No Puc</h3>
-                            <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar max-h-[160px] md:max-h-[280px]">
-                                {ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
-                                    <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
-                                        className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-red-100 text-red-700 hover:bg-red-200 shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
-                                ))}
-                            </div>
+                        <div className="flex flex-col min-h-0 mb-4">
+                            <h3 onClick={() => movePersonToCategory('red')} className={`text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-red-700 bg-red-100/50 py-1 rounded-lg italic shrink-0 ${personToMove ? 'clickable-title cursor-pointer' : ''}`}>No Puc</h3>
+                            <div className="flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
+                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)} className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-red-100 text-red-700 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                            ))}</div>
                         </div>
                     </aside>
                     <main className="flex-1 p-2 md:p-4 grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-4 overflow-y-auto custom-scrollbar content-start pb-4">
@@ -571,12 +550,12 @@
                             <div key={inst} onDragOver={e=>e.preventDefault()} onDrop={e => {
                                 const p = e.dataTransfer.getData("p");
                                 syncBoloData({ assignments: { ...assignments, [p]: inst }, attendance: { ...attendance, [p]: 'green' } });
-                            }} onClick={() => personToMove && syncBoloData({ assignments: { ...assignments, [personToMove]: inst }, attendance: { ...attendance, [personToMove]: 'green' } })}
-                                className="bg-white/40 rounded-xl md:rounded-[2rem] p-2 md:p-4 border border-white/40 shadow-inner h-[120px] md:h-auto">
+                            }} onClick={() => movePersonToCategory(inst)}
+                                className={`bg-white/40 rounded-xl md:rounded-[2rem] p-2 md:p-4 border border-white/40 shadow-inner min-h-[120px] transition-all ${personToMove ? 'cursor-pointer hover:bg-green-100/40' : ''}`}>
                                 <h3 className="text-[14px] md:text-[16px] font-black uppercase mb-1 border-b-2 border-green-900/10 italic">{inst}</h3>
                                 <div className="flex-wrap gap-1 flex">
                                     {ALL_PEOPLE.filter(p => assignments[p] === inst).map(p => (
-                                        <span key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={(e) => {e.stopPropagation(); setPersonToMove(p);}}
+                                        <span key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={(e) => { e.stopPropagation(); setPersonToMove(personToMove === p ? null : p); }}
                                             className={`text-[12px] md:text-[24px] font-black text-green-700 cursor-grab ${personToMove === p ? 'person-selected' : ''}`}>{p}</span>
                                     ))}
                                 </div>
@@ -592,7 +571,7 @@
                         <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-green-100/50 py-1 rounded-lg italic shrink-0 text-green-800">OK / Mirar</h3>
                         <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
                             {availablePeople.filter(p => !carData.some(c => c.driver === p || c.passengers.includes(p))).map(p => (
-                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(p)}
+                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)}
                                     className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                             ))}
                         </div>
@@ -602,7 +581,7 @@
                             <h3 className="text-xl font-black uppercase italic text-amber-900">Gestió de Cotxes</h3>
                             {isAdminAuth && (
                                 <button onClick={() => syncBoloData({ boloSettings: { ...boloSettings, carsEnabled: !boloSettings.carsEnabled } })}
-                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase transition-all shadow-sm ${boloSettings.carsEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-sm ${boloSettings.carsEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
                                     COTXES: {boloSettings.carsEnabled ? 'SI' : 'NO'}
                                 </button>
                             )}
@@ -614,12 +593,16 @@
                                         <div className="flex items-center gap-2 font-black uppercase italic text-sm text-amber-900"><Icon name="car" size={18}/> COTXE {car.id}</div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-[10px] font-black opacity-40">PLACES:</span>
-                                            <input type="number" min="1" max="9" className="w-10 bg-black/5 rounded-lg text-center font-black outline-none focus:bg-white transition-colors" value={car.capacity} 
-                                                onChange={(e) => {
-                                                    const newData = [...carData];
-                                                    newData[idx].capacity = parseInt(e.target.value) || 1;
-                                                    syncBoloData({ carData: newData });
-                                                }} />
+                                            {isAdminAuth ? (
+                                                <input type="number" min="1" max="9" className="w-10 bg-white rounded-lg text-center font-black border" value={car.capacity} 
+                                                    onChange={(e) => {
+                                                        const newData = [...carData];
+                                                        newData[idx].capacity = parseInt(e.target.value) || 1;
+                                                        syncBoloData({ carData: newData });
+                                                    }} />
+                                            ) : (
+                                                <span className="font-black text-amber-900 px-2">{car.capacity}</span>
+                                            )}
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
@@ -660,7 +643,7 @@
                                                 syncBoloData({ carData: newData });
                                                 setPersonToMove(null);
                                             }}
-                                            className="min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed border-amber-100 flex flex-wrap gap-1 content-start font-black text-xs text-amber-800/70">
+                                            className="min-h-[40px] bg-white/80 rounded-xl p-2 border-2 border-dashed border-amber-100 flex flex-wrap gap-1 font-black text-xs text-amber-800/70 cursor-pointer">
                                                 {car.passengers.map(p => (
                                                     <span key={p} className="bg-amber-50 px-1 rounded cursor-pointer hover:bg-red-100 transition-colors" onClick={(e) => {
                                                         e.stopPropagation();
@@ -681,8 +664,62 @@
                 </div>
             );
 
-            // Funcions de suport per als renders (Info, Food, Modals, etc. a dalt o mantenint el codi original)
-            // ... (Aquestes es mantenen segons l'estructura de la resposta anterior per ser completes)
+            const renderFoodTab = () => (
+                <div className="flex-1 flex flex-row overflow-hidden">
+                    <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-hidden">
+                        <h3 className="text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center bg-gray-100/50 py-1 rounded-lg italic shrink-0">Lliures</h3>
+                        <div className="flex flex-col gap-1.5 overflow-y-auto custom-scrollbar pb-64">
+                            {availablePeople.filter(p => !foodData.standard.includes(p) && !foodData.vegan.includes(p) && !foodData.glutenFree.includes(p) && !foodData.glutenFreeVegan.includes(p)).map(p => (
+                                <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)}
+                                    className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 hover:bg-white shadow-sm shrink-0 ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
+                            ))}
+                        </div>
+                    </aside>
+                    <main className="flex-1 p-2 md:p-4 overflow-y-auto custom-scrollbar pb-64">
+                        <div className="flex items-center justify-between mb-4 bg-white/40 p-3 rounded-2xl">
+                            <h3 className="text-xl font-black uppercase italic text-purple-900">Gestió de Menjar</h3>
+                            {isAdminAuth && (
+                                <button onClick={() => syncBoloData({ boloSettings: { ...boloSettings, foodEnabled: !boloSettings.foodEnabled } })}
+                                    className={`px-4 py-2 rounded-xl font-black text-xs uppercase shadow-sm ${boloSettings.foodEnabled ? 'bg-green-600 text-white' : 'bg-red-600 text-white'}`}>
+                                    MENJAR: {boloSettings.foodEnabled ? 'SI' : 'NO'}
+                                </button>
+                            )}
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {[
+                                { id: 'standard', label: 'MENJAR ESTÀNDARD', color: 'purple' },
+                                { id: 'vegan', label: 'VEGÀ / VEGETARIÀ', color: 'green' },
+                                { id: 'glutenFree', label: 'SENSE GLUTEN', color: 'blue' },
+                                { id: 'glutenFreeVegan', label: 'SENSE GLUTEN i VEGÀ', color: 'teal' }
+                            ].map(group => (
+                                <div key={group.id} onDragOver={e=>e.preventDefault()} onDrop={e => {
+                                    const p = e.dataTransfer.getData("p");
+                                    const newFD = { ...foodData };
+                                    Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== p));
+                                    newFD[group.id].push(p);
+                                    syncBoloData({ foodData: newFD });
+                                }} onClick={() => {
+                                    if (!personToMove) return;
+                                    const newFD = { ...foodData };
+                                    Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== personToMove));
+                                    newFD[group.id].push(personToMove);
+                                    syncBoloData({ foodData: newFD });
+                                    setPersonToMove(null);
+                                }}
+                                className={`bg-white/60 p-6 rounded-3xl shadow-md border border-white/40 min-h-[160px] ${personToMove ? 'cursor-pointer hover:bg-purple-100/40' : ''}`}>
+                                    <h4 className={`font-black uppercase italic mb-4 flex items-center gap-2 text-${group.color}-800`}><Icon name="utensils" size={18}/> {group.label}</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {(foodData[group.id] || []).map(p => (
+                                            <span key={p} onClick={(e) => { e.stopPropagation(); syncBoloData({ foodData: { ...foodData, [group.id]: foodData[group.id].filter(x => x !== p) } }); }}
+                                                className={`bg-${group.color}-100 text-${group.color}-900 px-3 py-1 rounded-full font-black text-sm md:text-xl cursor-pointer hover:bg-red-100`}>{p}</span>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+                </div>
+            );
 
             if (!isLoggedIn) return (
                 <div className="h-screen w-screen flex items-center justify-center p-4">
@@ -694,7 +731,7 @@
                                 <label htmlFor="adm" className="text-sm font-black text-gray-700 cursor-pointer select-none uppercase tracking-tight">Mode Administrador</label>
                             </div>
                             <input type="password" placeholder="Contrasenya" className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-green-500 outline-none text-xl font-bold" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
-                            <button type="submit" className="w-full bg-green-600 text-white font-black py-5 rounded-2xl hover:bg-green-700 shadow-xl transition-all uppercase tracking-widest text-lg">Entrar</button>
+                            <button type="submit" className="w-full bg-green-600 text-white font-black py-5 rounded-2xl hover:bg-green-700 shadow-xl uppercase tracking-widest text-lg">Entrar</button>
                         </form>
                     </div>
                 </div>
@@ -709,41 +746,28 @@
                     <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
                         <header className="px-3 py-3 md:px-6 md:py-4 bg-white/20 backdrop-blur-md flex justify-between items-center shrink-0 border-b border-white/20">
                             <div className="flex items-center gap-2 md:gap-3 shrink-0">
-                                <h2 className="text-[18px] sm:text-xl md:text-2xl font-black italic tracking-tighter uppercase shrink-0 m-0 leading-none">TUKATS - BOLOS</h2>
+                                <h2 className="text-[18px] sm:text-xl md:text-2xl font-black italic tracking-tighter uppercase leading-none">TUKATS - BOLOS</h2>
                             </div>
                             <div className="flex gap-2">
-                                {isAdminAuth && (
-                                    <button onClick={() => setShowConfigModal(true)} className="p-2 md:p-3 bg-white/50 text-blue-900 rounded-xl">
-                                        <Icon name="settings" size={20}/>
-                                    </button>
-                                )}
-                                <button onClick={() => setIsLoggedIn(false)} className="bg-red-600 text-white px-3 py-2 md:px-4 md:py-2 rounded-xl font-black flex items-center gap-1.5 hover:bg-red-700 uppercase tracking-tighter shadow-md text-xs shrink-0">
-                                    <Icon name="log-out" size={14}/> 
-                                    <span className="hidden sm:inline">Sortir</span>
-                                </button>
+                                {isAdminAuth && <button onClick={() => setShowConfigModal(true)} className="p-2 md:p-3 bg-white/50 text-blue-900 rounded-xl hover:bg-white shadow-sm"><Icon name="settings" size={20}/></button>}
+                                <button onClick={() => setIsLoggedIn(false)} className="bg-red-600 text-white px-3 py-2 rounded-xl font-black flex items-center gap-1.5 shadow-md text-xs shrink-0"><Icon name="log-out" size={14}/> <span className="hidden sm:inline">Sortir</span></button>
                             </div>
                         </header>
                         <main className="flex-1 p-2 md:p-8 flex flex-col items-center overflow-hidden">
                             <div className="w-full max-w-5xl bg-white/40 rounded-[2rem] md:rounded-[3rem] p-2 md:p-8 flex flex-col overflow-hidden shadow-2xl border border-white/40">
                                 {isAdminAuth && (
                                     <div className="mb-6 flex justify-end px-2">
-                                        <button onClick={() => { setEditingBoloData(null); setShowBoloModal(true); }} className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-green-700 transition-all uppercase tracking-tighter shadow-lg">
-                                            <Icon name="plus" size={18}/> Nou Bolo
-                                        </button>
+                                        <button onClick={() => { setEditingBoloData(null); setShowBoloModal(true); }} className="bg-green-600 text-white px-6 py-3 rounded-2xl font-black flex items-center gap-2 hover:bg-green-700 uppercase tracking-tighter shadow-lg shadow-green-600/20 active:scale-95"><Icon name="plus" size={18}/> Nou Bolo</button>
                                     </div>
                                 )}
                                 <div className="flex-1 overflow-y-auto pr-1 md:pr-3 custom-scrollbar space-y-8 pb-32">
                                     <section>
                                         <h3 className="text-2xl md:text-4xl font-black mb-4 uppercase border-b border-green-900/10 pb-2 italic tracking-tighter">Propers Bolos</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 px-2">
-                                            {futureBolos.map(renderBoloCard)}
-                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 px-2">{futureBolos.map(renderBoloCard)}</div>
                                     </section>
                                     <section>
                                         <h3 className="text-2xl md:text-4xl font-black mb-4 uppercase border-b border-green-900/10 pb-2 italic tracking-tighter opacity-40">Bolos Passats</h3>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 px-2">
-                                            {pastBolos.map(renderBoloCard)}
-                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 px-2">{pastBolos.map(renderBoloCard)}</div>
                                     </section>
                                 </div>
                             </div>
@@ -759,31 +783,48 @@
             const watchingCount = Object.values(attendance).filter(v => v === 'blue').length;
             const pendingCount = ALL_PEOPLE.length - confirmedCount - declinedCount - watchingCount;
 
+            const isInfoDisabled = !isAdminAuth && !selectedBolo.info;
+            const isCarsDisabled = !isAdminAuth && !boloSettings.carsEnabled;
+            const isFoodDisabled = !isAdminAuth && !boloSettings.foodEnabled;
+
             return (
                 <div className="h-screen w-screen flex flex-col overflow-hidden text-green-950">
                     <header className="bg-white/30 backdrop-blur-md border-b border-white/20 px-3 py-3 md:px-6 md:py-4 shrink-0">
                         <h2 className="text-[22px] md:text-4xl font-black italic leading-none tracking-tighter mb-4">{selectedBolo?.nombre}</h2>
                         <div className="flex gap-2 md:gap-4 mb-4">
-                            <button onClick={() => setActiveTab('instruments')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'instruments' ? 'btn-3d-pushed bg-green-500 text-white' : 'btn-3d-raised bg-white text-green-900'}`}>INSTRUMENTS</button>
-                            <button onClick={() => setActiveTab('info')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'info' ? 'btn-3d-pushed bg-blue-600 text-white' : 'btn-3d-raised bg-white text-blue-900'}`}>INFORMACIÓ</button>
-                            <button onClick={() => setActiveTab('cars')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'cars' ? 'btn-3d-pushed bg-amber-800 text-white' : 'btn-3d-raised bg-white text-amber-900'} ${!isAdminAuth && !boloSettings.carsEnabled ? 'opacity-30 pointer-events-none' : ''}`}>COTXES</button>
-                            <button onClick={() => setActiveTab('food')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'food' ? 'btn-3d-pushed bg-purple-600 text-white' : 'btn-3d-raised bg-white text-purple-900'} ${!isAdminAuth && !boloSettings.foodEnabled ? 'opacity-30 pointer-events-none' : ''}`}>MENJAR</button>
+                            <button onClick={() => { setActiveTab('instruments'); setPersonToMove(null); }} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'instruments' ? 'btn-3d-pushed bg-green-500 text-white' : 'btn-3d-raised bg-white text-green-900'}`}>INSTRUMENTS</button>
+                            <button onClick={() => !isInfoDisabled && setActiveTab('info')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'info' ? 'btn-3d-pushed bg-blue-600 text-white' : 'btn-3d-raised bg-white text-blue-900'} ${isInfoDisabled ? 'opacity-30 pointer-events-none' : ''}`}>INFORMACIÓ</button>
+                            <button onClick={() => !isCarsDisabled && setActiveTab('cars')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'cars' ? 'btn-3d-pushed bg-amber-800 text-white' : 'btn-3d-raised bg-white text-amber-900'} ${isCarsDisabled ? 'opacity-30 pointer-events-none' : ''}`}>COTXES</button>
+                            <button onClick={() => !isFoodDisabled && setActiveTab('food')} className={`flex-1 py-3 md:py-5 rounded-xl md:rounded-2xl font-black uppercase italic tracking-tighter text-[11px] md:text-xl transition-all ${activeTab === 'food' ? 'btn-3d-pushed bg-purple-600 text-white' : 'btn-3d-raised bg-white text-purple-900'} ${isFoodDisabled ? 'opacity-30 pointer-events-none' : ''}`}>MENJAR</button>
                         </div>
                         <div className="flex items-center justify-between w-full gap-2">
-                            <div className="flex items-center bg-black/5 rounded-xl p-1.5 md:px-6 md:py-3 gap-1 md:gap-6 flex-1 justify-between items-stretch">
-                                <div className="text-center flex-1"><div className="text-xl md:text-2xl font-black text-green-700">{confirmedCount}</div><div className="text-[11px] md:text-base font-black opacity-50">OK</div></div>
-                                <div className="text-center flex-1"><div className="text-xl md:text-2xl font-black text-orange-600">{pendingCount}</div><div className="text-[11px] md:text-base font-black opacity-50">?</div></div>
-                                <div className="text-center flex-1"><div className="text-xl md:text-2xl font-black text-red-600">{declinedCount}</div><div className="text-[11px] md:text-base font-black opacity-50">NO</div></div>
-                                <div className="text-center flex-1"><div className="text-xl md:text-2xl font-black text-blue-600">{watchingCount}</div><div className="text-[11px] md:text-base font-black flex items-center justify-center pt-0.5"><Icon name="eye" size={15}/></div></div>
+                            <div className="flex items-center bg-black/5 rounded-xl p-1.5 md:px-6 md:py-3 gap-1 md:gap-6 flex-1 justify-between">
+                                <div className="text-center flex-1">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-green-700">{confirmedCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase opacity-50">OK</div>
+                                </div>
+                                <div className="text-center flex-1">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-orange-600">{pendingCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase opacity-50">?</div>
+                                </div>
+                                <div className="text-center flex-1">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-red-600">{declinedCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase opacity-50">NO</div>
+                                </div>
+                                <div className="text-center flex-1">
+                                    <div className="text-xl md:text-2xl font-black leading-none text-blue-600">{watchingCount}</div>
+                                    <div className="text-[11px] md:text-base font-black uppercase flex items-center justify-center pt-0.5"><Icon name="eye" size={15}/></div>
+                                </div>
                             </div>
-                            <button onClick={() => { setSelectedBolo(null); setPersonToMove(null); }} className="bg-red-600 text-white px-4 py-2.5 md:px-8 md:py-3 rounded-xl font-black text-[14px] md:text-xl uppercase shrink-0">Tornar</button>
+                            <button onClick={() => { setSelectedBolo(null); setActiveTab('instruments'); setPersonToMove(null); }} className="bg-red-600 text-white px-4 py-2.5 rounded-xl font-black text-[14px] uppercase shadow-xl active:scale-95 shrink-0">Tornar</button>
                         </div>
                     </header>
                     {isLoading ? <div className="flex-1 flex items-center justify-center"><div className="w-16 h-16 border-4 border-green-600 border-t-transparent rounded-full loading-spin"></div></div> : (
                         <>
                             {activeTab === 'instruments' && renderInstrumentsTab()}
+                            {activeTab === 'info' && renderInfoTab()}
                             {activeTab === 'cars' && renderCarsTab()}
-                            {/* Les altres pestanyes seguirien la mateixa lògica */}
+                            {activeTab === 'food' && renderFoodTab()}
                         </>
                     )}
                     {personToMove && (
@@ -800,11 +841,10 @@
             );
         }
 
-        // Modals components simplified
         const BoloModal = ({ editingBoloData, onSave, onClose }) => (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
                 <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8">
-                    <h3 className="text-3xl font-black uppercase italic mb-6 text-green-900">{editingBoloData ? 'Editar Bolo' : 'Nou Bolo'}</h3>
+                    <h3 className="text-3xl font-black uppercase italic mb-6 text-green-900">{editingBoloData ? 'Editar' : 'Nou'} Bolo</h3>
                     <form onSubmit={onSave} className="space-y-4">
                         <input name="nombre" defaultValue={editingBoloData?.nombre} placeholder="Nom" className="w-full p-4 bg-gray-100 rounded-2xl font-bold" required />
                         <div className="grid grid-cols-2 gap-4">
@@ -823,7 +863,7 @@
 
         const ConfigModal = ({ settings, onUpdate, onClose }) => (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8">
+                <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
                     <h3 className="text-3xl font-black uppercase italic mb-6 text-blue-900">Ajustos</h3>
                     <form onSubmit={onUpdate} className="space-y-4">
                         <input name="userPass" defaultValue={settings.userPass} placeholder="User Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold" required />
