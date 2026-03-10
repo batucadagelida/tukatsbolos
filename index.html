@@ -591,13 +591,20 @@
                                         <div className="flex items-center gap-2 font-black uppercase italic text-sm text-amber-900"><Icon name="car" size={18}/> COTXE {car.id}</div>
                                         <div className="flex items-center gap-2">
                                             <span className="text-[10px] font-black opacity-40">PLACES:</span>
-                                            {/* El camp Places ara és editable per a tothom */}
-                                            <input type="number" min="1" max="9" className="w-10 bg-white rounded-lg text-center font-black border border-amber-200 shadow-inner" value={car.capacity} 
+                                            {/* Camp places millorat per a versió mòbil */}
+                                            <input 
+                                                type="number" 
+                                                inputMode="numeric"
+                                                min="1" max="9" 
+                                                className="w-12 h-10 bg-white rounded-lg text-center font-black border border-amber-200 shadow-inner focus:ring-2 focus:ring-amber-400 outline-none" 
+                                                value={car.capacity} 
+                                                onClick={(e) => e.stopPropagation()}
                                                 onChange={(e) => {
                                                     const newData = [...carData];
                                                     newData[idx].capacity = parseInt(e.target.value) || 1;
                                                     syncBoloData({ carData: newData });
-                                                }} />
+                                                }} 
+                                            />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-2 gap-3">
