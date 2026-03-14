@@ -22,9 +22,17 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
         
-        .loading-spin { animation: spin 1s linear infinite; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        
+        /* Alçada específica per mostrar aprox 3 persones */
+        .person-list-container {
+            max-height: 150px; /* Mòbil */
+            overflow-y: auto;
+        }
+        @media (min-width: 768px) {
+            .person-list-container {
+                max-height: 220px; /* Desktop */
+            }
+        }
+
         .person-selected {
             outline: 3px solid #16a34a;
             outline-offset: 2px;
@@ -54,9 +62,8 @@
             width: 100%;
         }
 
-        .overflow-y-auto, .overflow-x-auto {
-            -webkit-overflow-scrolling: touch;
-        }
+        .loading-spin { animation: spin 1s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 
         .clickable-title {
             transition: all 0.2s;
@@ -290,7 +297,13 @@
             const handleSaveBolo = async (e) => {
                 e.preventDefault();
                 const formData = new FormData(e.target);
-                const data = { nombre: formData.get('nombre'), fecha: formData.get('fecha'), hora: formData.get('hora'), duracion: formData.get('duracion'), lugar: formData.get('lugar') };
+                const data = { 
+                    nombre: formData.get('nombre'), 
+                    fecha: formData.get('fecha'), 
+                    hora: formData.get('hora'), 
+                    duracion: formData.get('duracion'), 
+                    lugar: formData.get('lugar') 
+                };
                 try {
                     if (editingBoloData) {
                         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', editingBoloData.id), data);
@@ -344,19 +357,19 @@
                     <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
                         <div className="flex flex-col min-h-0 mb-4">
                             <h3 onClick={() => movePersonToCategory('pending')} className={`text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-orange-700 bg-orange-100/50 py-1 rounded-lg italic shrink-0 ${personToMove ? 'clickable-title cursor-pointer' : ''}`}>Pendents</h3>
-                            <div className="flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p])).map(p => (
+                            <div className="person-list-container custom-scrollbar flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p])).map(p => (
                                 <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)} className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-white/40 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                             ))}</div>
                         </div>
                         <div className="flex flex-col min-h-0 mb-4">
                             <h3 onClick={() => movePersonToCategory('blue')} className={`text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-blue-700 bg-blue-100/50 py-1 rounded-lg italic shrink-0 ${personToMove ? 'clickable-title cursor-pointer' : ''}`}>Mirar</h3>
-                            <div className="flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => attendance[p] === 'blue').map(p => (
+                            <div className="person-list-container custom-scrollbar flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => attendance[p] === 'blue').map(p => (
                                 <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)} className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-blue-100 text-blue-700 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                             ))}</div>
                         </div>
                         <div className="flex flex-col min-h-0 mb-4">
                             <h3 onClick={() => movePersonToCategory('red')} className={`text-[12px] md:text-[18px] font-black uppercase mb-1.5 text-center tracking-[0.1em] text-red-700 bg-red-100/50 py-1 rounded-lg italic shrink-0 ${personToMove ? 'clickable-title cursor-pointer' : ''}`}>No Puc</h3>
-                            <div className="flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
+                            <div className="person-list-container custom-scrollbar flex flex-col gap-1.5">{ALL_PEOPLE.filter(p => attendance[p] === 'red').map(p => (
                                 <div key={p} draggable onDragStart={e => e.dataTransfer.setData("p", p)} onClick={() => setPersonToMove(personToMove === p ? null : p)} className={`p-2 md:p-4 rounded-xl text-[12px] md:text-[24px] font-black text-center cursor-grab bg-red-100 text-red-700 shadow-sm ${personToMove === p ? 'person-selected' : ''}`}>{p}</div>
                             ))}</div>
                         </div>
@@ -532,7 +545,7 @@
                         <div className="flex flex-col gap-0.5 text-[15px] font-black opacity-70 tracking-normal">
                             <div className="flex flex-wrap gap-x-4 gap-y-0.5 leading-tight">
                                 <span className="flex items-center gap-1 uppercase"><Icon name="clock" size={15}/> {b.hora}</span>
-                                {b.duracion && <span className="flex items-center gap-1"><Icon name="hourglass" size={15}/> {b.duracion}</span>}
+                                {b.duracion && <span className="flex items-center gap-1 uppercase"><Icon name="hourglass" size={15}/> {b.duracion}</span>}
                             </div>
                             <span className="flex items-center gap-1 leading-tight uppercase"><Icon name="map-pin" size={15}/> {b.lugar}</span>
                         </div>
@@ -683,7 +696,6 @@
             };
 
             const renderFoodTab = () => {
-                // Calcular el total de menjars sol·licitats
                 const totalFoodRequests = (foodData.standard?.length || 0) + 
                                          (foodData.vegan?.length || 0) + 
                                          (foodData.glutenFree?.length || 0) + 
@@ -749,16 +761,28 @@
 
             if (!isLoggedIn) return (
                 <div className="h-screen w-screen flex items-center justify-center p-4">
-                    <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full max-sm border-t-[10px] border-green-600">
-                        <h1 className="text-4xl font-black text-center mb-8 text-green-900 uppercase tracking-tighter italic">Tukats Login</h1>
-                        <form onSubmit={handleLogin} className="space-y-6">
-                            <div className="flex items-center space-x-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
-                                <input type="checkbox" id="adm" checked={isAdminMode} onChange={e => setIsAdminMode(e.target.checked)} className="w-6 h-6 accent-green-600 cursor-pointer" />
-                                <label htmlFor="adm" className="text-sm font-black text-gray-700 cursor-pointer select-none uppercase tracking-tight">Mode Administrador</label>
-                            </div>
-                            <input type="password" placeholder="Contrasenya" className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-green-500 outline-none text-xl font-bold" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
-                            <button type="submit" className="w-full bg-green-600 text-white font-black py-5 rounded-2xl hover:bg-green-700 shadow-xl uppercase tracking-widest text-lg">Entrar</button>
-                        </form>
+                    <div className="flex flex-col items-center w-full max-w-sm">
+                        {/* Logo centrat sobre el login */}
+                        <div className="mb-6 w-32 h-32 rounded-3xl overflow-hidden shadow-2xl border-4 border-white/50">
+                            <img 
+                                src="Logo_Quadrat.jpg" 
+                                alt="Logo Tukats" 
+                                className="w-full h-full object-cover"
+                                onError={(e) => e.target.style.display = 'none'}
+                            />
+                        </div>
+                        
+                        <div className="bg-white p-8 rounded-[2.5rem] shadow-2xl w-full border-t-[10px] border-green-600">
+                            <h1 className="text-4xl font-black text-center mb-8 text-green-900 uppercase tracking-tighter italic">Tukats Login</h1>
+                            <form onSubmit={handleLogin} className="space-y-6">
+                                <div className="flex items-center space-x-3 bg-gray-50 p-4 rounded-2xl border border-gray-100">
+                                    <input type="checkbox" id="adm" checked={isAdminMode} onChange={e => setIsAdminMode(e.target.checked)} className="w-6 h-6 accent-green-600 cursor-pointer" />
+                                    <label htmlFor="adm" className="text-sm font-black text-gray-700 cursor-pointer select-none uppercase tracking-tight">Mode Administrador</label>
+                                </div>
+                                <input type="password" placeholder="Contrasenya" className="w-full p-5 bg-gray-50 border-2 border-transparent rounded-2xl focus:border-green-500 outline-none text-xl font-bold" value={passwordInput} onChange={e => setPasswordInput(e.target.value)} required />
+                                <button type="submit" className="w-full bg-green-600 text-white font-black py-5 rounded-2xl hover:bg-green-700 shadow-xl uppercase tracking-widest text-lg">Entrar</button>
+                            </form>
+                        </div>
                     </div>
                 </div>
             );
@@ -859,18 +883,39 @@
 
         const BoloModal = ({ editingBoloData, onSave, onClose }) => (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8">
+                <div className="bg-white w-full max-w-lg rounded-[2.5rem] p-8 shadow-2xl">
                     <h3 className="text-3xl font-black uppercase italic mb-6 text-green-900">{editingBoloData ? 'Editar' : 'Nou'} Bolo</h3>
                     <form onSubmit={onSave} className="space-y-4">
-                        <input name="nombre" defaultValue={editingBoloData?.nombre} placeholder="Nom" className="w-full p-4 bg-gray-100 rounded-2xl font-bold" required />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input name="fecha" type="date" defaultValue={editingBoloData?.fecha} className="p-4 bg-gray-100 rounded-2xl font-bold" required />
-                            <input name="hora" type="time" defaultValue={editingBoloData?.hora} className="p-4 bg-gray-100 rounded-2xl font-bold" required />
+                        <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase opacity-50 ml-2">NOM DEL BOLO</label>
+                            <input name="nombre" defaultValue={editingBoloData?.nombre} placeholder="Nom del bolo" className="w-full p-4 bg-gray-100 rounded-2xl font-bold border-2 border-transparent focus:border-green-500 outline-none" required />
                         </div>
-                        <input name="lugar" defaultValue={editingBoloData?.lugar} placeholder="Lloc" className="w-full p-4 bg-gray-100 rounded-2xl font-bold" required />
-                        <div className="flex gap-3 pt-4">
-                            <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase">Cancel·lar</button>
-                            <button type="submit" className="flex-1 py-4 bg-green-600 text-white font-black rounded-2xl uppercase">Guardar</button>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">DATA</label>
+                                <input name="fecha" type="date" defaultValue={editingBoloData?.fecha} className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">HORA</label>
+                                <input name="hora" type="time" defaultValue={editingBoloData?.hora} className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                            </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">LLOC</label>
+                                <input name="lugar" defaultValue={editingBoloData?.lugar} placeholder="Lloc" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">DURADA</label>
+                                <input name="duracion" defaultValue={editingBoloData?.duracion} placeholder="Ex: 1h 30min" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 pt-6">
+                            <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">Cancel·lar</button>
+                            <button type="submit" className="flex-1 py-4 bg-green-600 text-white font-black rounded-2xl uppercase tracking-widest active:scale-95 shadow-lg shadow-green-600/20 transition-all">Guardar</button>
                         </div>
                     </form>
                 </div>
@@ -882,11 +927,11 @@
                 <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
                     <h3 className="text-3xl font-black uppercase italic mb-6 text-blue-900">Ajustos</h3>
                     <form onSubmit={onUpdate} className="space-y-4">
-                        <input name="userPass" defaultValue={settings.userPass} placeholder="User Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold" required />
-                        <input name="adminPass" defaultValue={settings.adminPass} placeholder="Admin Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold" required />
+                        <input name="userPass" defaultValue={settings.userPass} placeholder="User Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                        <input name="adminPass" defaultValue={settings.adminPass} placeholder="Admin Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
                         <div className="flex gap-3 pt-4">
-                            <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase">Tancar</button>
-                            <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-2xl uppercase">Actualitzar</button>
+                            <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase active:scale-95 transition-all">Tancar</button>
+                            <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-2xl uppercase active:scale-95 transition-all">Actualitzar</button>
                         </div>
                     </form>
                 </div>
