@@ -147,8 +147,7 @@
         const INSTRUMENTS = ["1a", "2a", "3a", "Caixa", "Timba", "Xapa", "Tamborin", "Repe"];
         const MESOS = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
 
-        // Helper component to show weather for a bolo
-        const WeatherBadge = ({ lugar, fecha, hora }) => {
+        const WeatherBadge = ({ lugar, fecha }) => {
             const [weather, setWeather] = useState(null);
             const [loading, setLoading] = useState(false);
 
@@ -156,40 +155,54 @@
                 const fetchWeather = async () => {
                     if (!lugar || !fecha) return;
 
-                    const boloDate = new Date(fecha);
+                    // Parse fecha locally to avoid timezone shifts
+                    const [y, m, d] = fecha.split('-').map(Number);
+                    const boloDate = new Date(y, m - 1, d);
                     const today = new Date();
                     today.setHours(0,0,0,0);
                     
                     const diffDays = Math.ceil((boloDate - today) / (1000 * 60 * 60 * 24));
 
-                    // Only fetch if within the next 14 days and not in the past
-                    if (diffDays < 0 || diffDays > 14) {
+                    // Show nothing for past events, "Sense pronòstic" for distant ones
+                    if (diffDays < 0) {
+                        setWeather(null);
+                        return;
+                    }
+                    if (diffDays > 14) {
                         setWeather({ error: "Sense pronòstic" });
                         return;
                     }
 
                     setLoading(true);
                     try {
-                        // 1. Geocode location to get lat/lon
+                        // Geocode location
                         const geoRes = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(lugar)}&count=1&language=es&format=json`);
                         const geoData = await geoRes.json();
                         
+                        let lat, lon;
                         if (!geoData.results || geoData.results.length === 0) {
-                            setWeather({ error: "?" });
-                            return;
+                            // Try to append "Catalunya" for better results if the first search fails
+                            const geoResFallback = await fetch(`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(lugar + ', Catalunya')}&count=1&language=es&format=json`);
+                            const geoDataFallback = await geoResFallback.json();
+                            if (!geoDataFallback.results) {
+                                setWeather({ error: "?" });
+                                return;
+                            }
+                            lat = geoDataFallback.results[0].latitude;
+                            lon = geoDataFallback.results[0].longitude;
+                        } else {
+                            lat = geoData.results[0].latitude;
+                            lon = geoData.results[0].longitude;
                         }
 
-                        const { latitude, longitude } = geoData.results[0];
-
-                        // 2. Get weather forecast
-                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${latitude}&longitude=${longitude}&daily=weather_code,temperature_2m_max&start_date=${fecha}&end_date=${fecha}&timezone=auto`);
+                        // Get forecast
+                        const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&daily=weather_code,temperature_2m_max&start_date=${fecha}&end_date=${fecha}&timezone=auto`);
                         const weatherData = await weatherRes.json();
 
                         if (weatherData.daily) {
                             const code = weatherData.daily.weather_code[0];
                             const temp = Math.round(weatherData.daily.temperature_2m_max[0]);
                             
-                            // Map WMO Weather Interpretation Codes
                             let icon = "sun";
                             if (code >= 1 && code <= 3) icon = "cloud-sun";
                             else if (code >= 45 && code <= 48) icon = "cloud";
@@ -211,15 +224,15 @@
             }, [lugar, fecha]);
 
             if (loading) return (
-                <div className="absolute -top-4 right-16 w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center bg-white/80 weather-tab z-20 border border-black/5">
-                    <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full loading-spin"></div>
+                <div className="absolute -top-4 right-16 md:right-20 w-14 h-14 md:w-16 md:h-16 rounded-xl flex items-center justify-center bg-white/80 weather-tab z-20 border border-black/5">
+                    <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full loading-spin"></div>
                 </div>
             );
 
             if (!weather) return null;
 
             return (
-                <div className={`absolute -top-4 right-16 md:right-[72px] w-14 h-14 md:w-16 md:h-16 rounded-xl flex flex-col items-center justify-center weather-tab z-20 ${weather.error ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-600 border border-black/5'}`}>
+                <div className={`absolute -top-4 right-16 md:right-20 w-14 h-14 md:w-16 md:h-16 rounded-xl flex flex-col items-center justify-center weather-tab z-20 ${weather.error ? 'bg-gray-100 text-gray-400' : 'bg-white text-blue-600 border border-black/5'}`}>
                     {weather.error ? (
                         <span className="text-[8px] font-black uppercase text-center px-1 leading-tight">{weather.error}</span>
                     ) : (
@@ -725,15 +738,15 @@
                 const precio = b.precio || 0;
                 const tipoCobro = b.tipoCobro || "FACTURA";
                 
-                // Color del cuadro de precio: gris si es pasado o donación, verde si es factura
-                const priceBadgeColorClass = (pasado || tipoCobro === "DONACIÓ") ? "bg-gray-400 text-white" : "bg-[#DCF23A] text-black";
+                // Color del precio: gris si pasado, negro/verde si donación, verde/negro si factura
+                const priceBadgeColorClass = (pasado) ? "bg-gray-400 text-white" : (tipoCobro === "DONACIÓ") ? "bg-black text-[#DCF23A]" : "bg-[#DCF23A] text-black";
 
                 return (
                     <div key={b.id} onClick={() => { setSelectedBolo(b); setActiveTab('instruments'); }} 
                          className={`p-4 bg-white/70 rounded-3xl flex flex-col gap-2 shadow-md hover:border-green-500 border-2 border-transparent transition-all cursor-pointer relative group mt-4 mb-2 ${pasado ? 'opacity-50 grayscale-[20%]' : ''}`}>
                         
                         {/* Weather Forecast Badge */}
-                        <WeatherBadge lugar={b.lugar} fecha={b.fecha} hora={b.hora} />
+                        <WeatherBadge lugar={b.lugar} fecha={b.fecha} />
 
                         <div className={`absolute -top-4 right-0 md:-right-2 w-14 h-14 md:w-16 md:h-16 rounded-xl flex flex-col items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-500 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
                             <span className="text-lg md:text-xl font-black leading-none">{day}</span>
@@ -1116,7 +1129,7 @@
                                 </div>
                             ))}
                         </div>
-                        <button onClick={onClose} className="mt-6 w-full py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">Tancar</button>
+                        <button onClose={onClose} className="mt-6 w-full py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase tracking-widest active:scale-95 transition-all">Tancar</button>
                     </div>
                 </div>
             );
