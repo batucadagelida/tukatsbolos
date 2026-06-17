@@ -5,11 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tukats - Gestió de Batucada</title>
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- React & Babel Standalone -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Firebase Compat (Carga global sin módulos ni importmaps) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
 
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
@@ -74,21 +81,7 @@
 <body>
     <div id="root"></div>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "firebase/app": "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js",
-                "firebase/auth": "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js",
-                "firebase/firestore": "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"
-            }
-        }
-    </script>
-
-    <script type="text/babel" data-type="module" data-presets="react">
-        import { initializeApp } from "firebase/app";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "firebase/auth";
-        import { getFirestore, doc, setDoc, onSnapshot, updateDoc, collection, deleteDoc, addDoc, query, getDoc } from "firebase/firestore";
-
+    <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
         const productionConfig = {
@@ -101,9 +94,11 @@
         };
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : productionConfig;
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        
+        // Inicialización usando la API clásica / compat
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const db = firebase.firestore();
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'tukats-batucada-v1';
 
         const Icon = ({ name, size = 16, className = "" }) => {
@@ -274,31 +269,36 @@
             useEffect(() => {
                 const initAuth = async () => {
                     if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token).catch(async () => {
-                            await signInAnonymously(auth);
-                        });
+                        try {
+                            await auth.signInWithCustomToken(__initial_auth_token);
+                        } catch (e) {
+                            await auth.signInAnonymously();
+                        }
                     } else {
-                        await signInAnonymously(auth);
+                        await auth.signInAnonymously();
                     }
                 };
                 initAuth();
-                const unsubscribe = onAuthStateChanged(auth, setUser);
+                const unsubscribe = auth.onAuthStateChanged(setUser);
                 return () => unsubscribe();
             }, []);
 
             useEffect(() => {
                 if (!user) return;
-                const unsubSettings = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'config'), snap => {
-                    if (snap.exists()) setSettings(snap.data());
+                
+                const unsubSettings = db.doc(`artifacts/${appId}/public/data/app_settings/config`).onSnapshot(snap => {
+                    if (snap.exists) setSettings(snap.data());
                 });
-                const unsubMembers = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'members_list', 'current'), snap => {
-                    if (snap.exists()) {
+
+                const unsubMembers = db.doc(`artifacts/${appId}/public/data/members_list/current`).onSnapshot(snap => {
+                    if (snap.exists) {
                         setMembers((snap.data().names || []).sort());
                     } else {
-                        setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'members_list', 'current'), { names: DEFAULT_MEMBERS, disabled: [] });
+                        db.doc(`artifacts/${appId}/public/data/members_list/current`).set({ names: DEFAULT_MEMBERS, disabled: [] });
                     }
                 });
-                const unsubBolos = onSnapshot(collection(db, 'artifacts', appId, 'public', 'data', 'bolos'), snap => {
+
+                const unsubBolos = db.collection(`artifacts/${appId}/public/data/bolos`).onSnapshot(snap => {
                     const bolosList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setBolos(bolosList);
                     if (selectedBolo) {
@@ -306,14 +306,16 @@
                         if (updated) setSelectedBolo(updated);
                     }
                 });
+
                 return () => { unsubSettings(); unsubMembers(); unsubBolos(); };
             }, [user, selectedBolo?.id]);
 
             useEffect(() => {
                 if (!user || !selectedBolo) return;
                 setIsLoading(true);
-                const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', selectedBolo.id), snap => {
-                    if (snap.exists()) {
+
+                const unsub = db.doc(`artifacts/${appId}/public/data/bolos_attendance/${selectedBolo.id}`).onSnapshot(snap => {
+                    if (snap.exists) {
                         const d = snap.data();
                         setAttendance(d.attendance || {});
                         setAssignments(d.assignments || {});
@@ -340,8 +342,8 @@
 
             const syncBoloData = async (updates) => {
                 if (!user || !selectedBolo) return;
-                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', selectedBolo.id);
-                const boloRef = doc(db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id);
+                const docRef = db.doc(`artifacts/${appId}/public/data/bolos_attendance/${selectedBolo.id}`);
+                const boloRef = db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`);
                 
                 const finalAtt = updates.attendance || attendance;
                 const finalAss = updates.assignments || assignments;
@@ -365,12 +367,12 @@
                 counts.pendingCount = members.length - counts.memberCount - counts.declinedCount - counts.watchingCount;
 
                 try {
-                    await updateDoc(docRef, { 
+                    await docRef.update({ 
                         attendance: finalAtt, assignments: finalAss,
                         carData: finalCarData, foodData: updates.foodData || foodData,
                         boloSettings: finalSettings, carCosts: finalCarCosts
                     });
-                    await updateDoc(boloRef, { ...counts, carsEnabled: !!finalSettings.carsEnabled, foodEnabled: !!finalSettings.foodEnabled });
+                    await boloRef.update({ ...counts, carsEnabled: !!finalSettings.carsEnabled, foodEnabled: !!finalSettings.foodEnabled });
                 } catch (e) { console.error(e); }
             };
 
@@ -409,7 +411,7 @@
                     adminPass: formData.get('adminPass')
                 };
                 try {
-                    await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'app_settings', 'config'), newSettings);
+                    await db.doc(`artifacts/${appId}/public/data/app_settings/config`).set(newSettings);
                     setShowConfigModal(false);
                 } catch (err) { console.error(err); }
             };
@@ -418,8 +420,8 @@
                 e.stopPropagation();
                 if (!confirm("Segur que vols eliminar aquest bolo?")) return;
                 try {
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', id));
-                    await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', id));
+                    await db.doc(`artifacts/${appId}/public/data/bolos/${id}`).delete();
+                    await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${id}`).delete();
                 } catch (err) { console.error(err); }
             };
 
@@ -435,13 +437,13 @@
                 };
                 try {
                     if (editingBoloData) {
-                        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', editingBoloData.id), data);
+                        await db.doc(`artifacts/${appId}/public/data/bolos/${editingBoloData.id}`).update(data);
                     } else {
-                        const docRef = await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'bolos'), {
+                        const docRef = await db.collection(`artifacts/${appId}/public/data/bolos`).add({
                             ...data, memberCount: 0, pendingCount: members.length, declinedCount: 0, watchingCount: 0,
                             info: "", carsEnabled: false, foodEnabled: false, precio: 0, googleMaps: "", tipoCobro: "FACTURA"
                         });
-                        await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', docRef.id), {
+                        await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${docRef.id}`).set({
                             attendance: {}, assignments: {}, 
                             carData: Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })),
                             foodData: { standard: [], vegan: [], glutenFree: [], glutenFreeVegan: [] },
@@ -459,13 +461,13 @@
                 if (newDisabledList !== null) {
                     disabledData = newDisabledList;
                 } else {
-                    const snap = await getDoc(doc(db, 'artifacts', appId, 'public', 'data', 'members_list', 'current'));
-                    if (snap.exists()) {
+                    const snap = await db.doc(`artifacts/${appId}/public/data/members_list/current`).get();
+                    if (snap.exists) {
                         disabledData = snap.data().disabled || [];
                     }
                 }
 
-                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'members_list', 'current'), { 
+                await db.doc(`artifacts/${appId}/public/data/members_list/current`).set({ 
                     names: newList,
                     disabled: disabledData
                 });
@@ -473,9 +475,9 @@
                 if (removedName) {
                     const futureBolos = bolos.filter(b => !esPasado(b));
                     for (const bolo of futureBolos) {
-                        const attRef = doc(db, 'artifacts', appId, 'public', 'data', 'bolos_attendance', bolo.id);
-                        const attSnap = await getDoc(attRef);
-                        if (attSnap.exists()) {
+                        const attRef = db.doc(`artifacts/${appId}/public/data/bolos_attendance/${bolo.id}`);
+                        const attSnap = await attRef.get();
+                        if (attSnap.exists) {
                             const d = attSnap.data();
                             const newAtt = { ...(d.attendance || {}) };
                             const newAss = { ...(d.assignments || {}) };
@@ -501,14 +503,14 @@
                             });
 
                             if (changed) {
-                                await updateDoc(attRef, { attendance: newAtt, assignments: newAss, foodData: newFood, carData: newCarData });
+                                await attRef.update({ attendance: newAtt, assignments: newAss, foodData: newFood, carData: newCarData });
                                 const counts = {
                                     memberCount: Object.values(newAss).filter(v => v !== null).length,
                                     declinedCount: Object.values(newAtt).filter(v => v === 'red').length,
                                     watchingCount: Object.values(newAtt).filter(v => v === 'blue').length,
                                 };
                                 counts.pendingCount = newList.length - counts.memberCount - counts.declinedCount - counts.watchingCount;
-                                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', bolo.id), counts);
+                                await db.doc(`artifacts/${appId}/public/data/bolos/${bolo.id}`).update(counts);
                             }
                         }
                     }
@@ -604,7 +606,7 @@
                                                 defaultValue={selectedBolo.precio || 0}
                                                 onBlur={async (e) => {
                                                     const newVal = parseInt(e.target.value) || 0;
-                                                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id), { precio: newVal });
+                                                    await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ precio: newVal });
                                                 }}
                                             />
                                             <span className="text-2xl font-black text-green-900">€</span>
@@ -617,7 +619,7 @@
                                             defaultValue={selectedBolo.tipoCobro || "FACTURA"}
                                             onChange={async (e) => {
                                                 const newVal = e.target.value;
-                                                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id), { tipoCobro: newVal });
+                                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ tipoCobro: newVal });
                                             }}
                                         >
                                             <option value="FACTURA">FACTURA</option>
@@ -640,7 +642,7 @@
                                         defaultValue={selectedBolo.googleMaps || ""}
                                         onBlur={async (e) => {
                                             const newVal = e.target.value;
-                                            await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id), { googleMaps: newVal });
+                                            await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ googleMaps: newVal });
                                         }}
                                     />
                                 </div>
@@ -654,7 +656,7 @@
                             defaultValue={selectedBolo.info}
                             onBlur={async (e) => {
                                 const newVal = e.target.value;
-                                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'bolos', selectedBolo.id), { info: newVal });
+                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ info: newVal });
                                 setSelectedBolo({...selectedBolo, info: newVal});
                             }} />
                     ) : (
@@ -1131,8 +1133,8 @@
             const [disabledMembers, setDisabledMembers] = useState([]);
 
             useEffect(() => {
-                const unsub = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'members_list', 'current'), snap => {
-                    if (snap.exists()) {
+                const unsub = db.doc(`artifacts/${appId}/public/data/members_list/current`).onSnapshot(snap => {
+                    if (snap.exists) {
                         setDisabledMembers((snap.data().disabled || []).sort());
                     }
                 });
