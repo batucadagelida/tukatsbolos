@@ -5,12 +5,15 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tukats - Gestió de Batucada</title>
     
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <!-- React & Babel Standalone -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- Firebase Compat (Carga global sin módulos ni importmaps) -->
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
@@ -78,7 +81,8 @@
 <body>
     <div id="root"></div>
 
-    <script type="text/babel" data-type="module">
+    <script type="text/babel">
+        /** @jsxRuntime classic */
         const { useState, useEffect, useMemo } = React;
 
         const productionConfig = {
@@ -730,7 +734,7 @@
                                 </div>
                             </div>
                             <div className="flex justify-between items-center bg-blue-50/70 p-3 rounded-xl font-black text-blue-900 border border-blue-200">
-                                <span>Total aportat membres:</span>
+                                <span>Total Atansat membres:</span>
                                 <span>{totalAportatNum.toFixed(1)} €</span>
                             </div>
                             <div className="flex justify-between items-center bg-red-50/70 p-3 rounded-xl font-black text-red-900 border border-red-200">
