@@ -79,7 +79,6 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        // Al usar Babel 7.13, ya no necesitamos ningún comentario aquí arriba. ¡Limpio y directo!
         const { useState, useEffect, useMemo } = React;
 
         const productionConfig = {
@@ -93,7 +92,6 @@
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : productionConfig;
         
-        // Inicialización usando la API clásica / compat
         firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const db = firebase.firestore();
@@ -124,6 +122,8 @@
                 user: <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" stroke="currentColor" fill="none" />,
                 'chevron-up': <polyline points="18 15 12 9 6 15" stroke="currentColor" fill="none" />,
                 'chevron-down': <polyline points="6 9 12 15 18 9" stroke="currentColor" fill="none" />,
+                download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" fill="none"/></>,
+                upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" fill="none"/></>,
                 
                 sun: <circle cx="12" cy="12" r="7" fill={sunColor} />,
                 cloud: <path d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.2-3.9-4.5-1-4.1-4.6-7-8.9-7-3.6 0-6.7 2-8.1 4.9C1.1 12.1 3 14 3 14.5c0 2.5 2 4.5 4.5 4.5h10Z" fill={cloudColor} />,
@@ -139,7 +139,7 @@
                     <path d="M17.5 17c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.2-3.9-4.5-1-4.1-4.6-7-8.9-7-3.6 0-6.7 2-8.1 4.9C1.1 10.1 3 12 3 12.5c0 2.5 2 4.5 4.5 4.5h10Z" fill={cloudColor} />
                     <path d="m13 15-3 4h5l-3 4" fill={lightningColor} />
                 </>,
-                snowflake: <path d="M12 2l1.5 3h3l-2.5 2 1 3-3-2-3 2 1-3-2.5-2h3zM5 12l1.5 3h3l-2.5 2 1 3-3-2-3 2 1-3-2.5-2h3zM19 12l1.5 3h3l-2.5 2 1 3-3-2-3 2 1-3-2.5-2h3z" fill={snowColor}/>
+                snowflake: <path d="M12 2l1.5 3h3l-2.5 2 1 3-3-2-3 2 1-3-2.5-2h3z" fill={snowColor}/>
             };
             return (
                 <svg viewBox="0 0 24 24" width={size} height={size} strokeLinecap="round" strokeLinejoin="round" className={className}>
@@ -148,7 +148,6 @@
             );
         };
 
-        const DEFAULT_MEMBERS = ["Jesus", "Merche", "Txis", "Josep", "Nacho", "Mon", "Claudia", "Toñi", "Alba", "Viñet", "Evelyn", "Dahna", "DavidB", "David", "Xavi", "Johny", "Valentin", "JosepA", "Merce", "Lorena", "Bruna", "Emily", "Valentina", "Carmen", "Maria", "Marta", "Paula", "Ona", "Aina", "Lluis", "Ernest"].sort();
         const INSTRUMENTS = ["1a", "2a", "3a", "Caixa", "Timba", "Xapa", "Tamborin", "Repe"];
         const MESOS = ["Gener", "Febrer", "Març", "Abril", "Maig", "Juny", "Juliol", "Agost", "Setembre", "Octubre", "Novembre", "Desembre"];
         const DIES_SETMANA = ["Dg", "Dl", "Dt", "Dc", "Dj", "Dv", "Ds"];
@@ -247,7 +246,7 @@
             const [selectedBolo, setSelectedBolo] = useState(null);
             const [activeTab, setActiveTab] = useState('instruments');
             
-            const [members, setMembers] = useState(DEFAULT_MEMBERS);
+            const [members, setMembers] = useState([]);
             const [attendance, setAttendance] = useState({});
             const [assignments, setAssignments] = useState({});
             const [carData, setCarData] = useState(Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })));
@@ -292,7 +291,7 @@
                     if (snap.exists) {
                         setMembers((snap.data().names || []).sort());
                     } else {
-                        db.doc(`artifacts/${appId}/public/data/members_list/current`).set({ names: DEFAULT_MEMBERS, disabled: [] });
+                        db.doc(`artifacts/${appId}/public/data/members_list/current`).set({ names: [], disabled: [] });
                     }
                 });
 
@@ -358,9 +357,9 @@
                 }));
 
                 const counts = {
-                    memberCount: Object.values(finalAss).filter(v => v !== null).length,
-                    declinedCount: Object.values(finalAtt).filter(v => v === 'red').length,
-                    watchingCount: Object.values(finalAtt).filter(v => v === 'blue').length,
+                    memberCount: Object.keys(finalAss).filter(p => members.includes(p) && finalAss[p] !== null && finalAss[p] !== undefined).length,
+                    declinedCount: Object.keys(finalAtt).filter(p => members.includes(p) && finalAtt[p] === 'red').length,
+                    watchingCount: Object.keys(finalAtt).filter(p => members.includes(p) && finalAtt[p] === 'blue').length,
                 };
                 counts.pendingCount = members.length - counts.memberCount - counts.declinedCount - counts.watchingCount;
 
@@ -470,47 +469,45 @@
                     disabled: disabledData
                 });
                 
-                if (removedName) {
-                    const futureBolos = bolos.filter(b => !esPasado(b));
-                    for (const bolo of futureBolos) {
-                        const attRef = db.doc(`artifacts/${appId}/public/data/bolos_attendance/${bolo.id}`);
-                        const attSnap = await attRef.get();
-                        if (attSnap.exists) {
-                            const d = attSnap.data();
-                            const newAtt = { ...(d.attendance || {}) };
-                            const newAss = { ...(d.assignments || {}) };
-                            const newFood = { ...(d.foodData || {}) };
-                            let changed = false;
+                const futureBolos = bolos.filter(b => !esPasado(b));
+                for (const bolo of futureBolos) {
+                    const attRef = db.doc(`artifacts/${appId}/public/data/bolos_attendance/${bolo.id}`);
+                    const attSnap = await attRef.get();
+                    if (attSnap.exists) {
+                        const d = attSnap.data();
+                        const newAtt = { ...(d.attendance || {}) };
+                        const newAss = { ...(d.assignments || {}) };
+                        const newFood = { ...(d.foodData || {}) };
 
-                            if (newAtt[removedName]) { delete newAtt[removedName]; changed = true; }
-                            if (newAss[removedName]) { delete newAss[removedName]; changed = true; }
+                        if (removedName) {
+                            if (newAtt[removedName]) delete newAtt[removedName];
+                            if (newAss[removedName]) delete newAss[removedName];
                             Object.keys(newFood).forEach(k => {
                                 if (newFood[k]?.includes(removedName)) {
                                     newFood[k] = newFood[k].filter(n => n !== removedName);
-                                    changed = true;
                                 }
                             });
-                            const newCarData = (d.carData || []).map(car => {
-                                let cChg = false;
-                                let drv = car.driver;
-                                let pss = [...(car.passengers || [])];
-                                if (drv === removedName) { drv = null; cChg = true; }
-                                if (pss.includes(removedName)) { pss = pss.filter(n => n !== removedName); cChg = true; }
-                                if (cChg) changed = true;
-                                return { ...car, driver: drv, passengers: pss };
-                            });
-
-                            if (changed) {
-                                await attRef.update({ attendance: newAtt, assignments: newAss, foodData: newFood, carData: newCarData });
-                                const counts = {
-                                    memberCount: Object.values(newAss).filter(v => v !== null).length,
-                                    declinedCount: Object.values(newAtt).filter(v => v === 'red').length,
-                                    watchingCount: Object.values(newAtt).filter(v => v === 'blue').length,
-                                };
-                                counts.pendingCount = newList.length - counts.memberCount - counts.declinedCount - counts.watchingCount;
-                                await db.doc(`artifacts/${appId}/public/data/bolos/${bolo.id}`).update(counts);
-                            }
                         }
+
+                        const newCarData = (d.carData || []).map(car => {
+                            let drv = car.driver;
+                            let pss = [...(car.passengers || [])];
+                            if (removedName) {
+                                if (drv === removedName) drv = null;
+                                if (pss.includes(removedName)) pss = pss.filter(n => n !== removedName);
+                            }
+                            return { ...car, driver: drv, passengers: pss };
+                        });
+
+                        await attRef.update({ attendance: newAtt, assignments: newAss, foodData: newFood, carData: newCarData });
+                        
+                        const counts = {
+                            memberCount: Object.keys(newAss).filter(p => newList.includes(p) && newAss[p] !== null && newAss[p] !== undefined).length,
+                            declinedCount: Object.keys(newAtt).filter(p => newList.includes(p) && newAtt[p] === 'red').length,
+                            watchingCount: Object.keys(newAtt).filter(p => newList.includes(p) && newAtt[p] === 'blue').length,
+                        };
+                        counts.pendingCount = newList.length - counts.memberCount - counts.declinedCount - counts.watchingCount;
+                        await db.doc(`artifacts/${appId}/public/data/bolos/${bolo.id}`).update(counts);
                     }
                 }
             };
@@ -557,7 +554,7 @@
                         {INSTRUMENTS.map(inst => (
                             <div key={inst} onDragOver={e=>e.preventDefault()} onDrop={e => {
                                 const p = e.dataTransfer.getData("p");
-                                syncBoloData({ assignments: { ...assignments, [p]: inst }, attendance: { ...attendance, [p]: 'green' } });
+                                if(members.includes(p)) syncBoloData({ assignments: { ...assignments, [p]: inst }, attendance: { ...attendance, [p]: 'green' } });
                             }} onClick={() => movePersonToCategory(inst)}
                                 className={`bg-white/40 rounded-xl md:rounded-[2rem] p-2 md:p-4 border border-white/40 shadow-inner min-h-[120px] transition-all ${personToMove ? 'cursor-pointer hover:bg-green-100/40' : ''}`}>
                                 <h3 className="text-[14px] md:text-[16px] font-black uppercase mb-1 border-b-2 border-green-900/10 italic">{inst}</h3>
@@ -673,8 +670,8 @@
                 const propNum = Number(carCosts.proposta) || 0;
                 const distTot = distNum * 2;
                 const costGasCotxe = Math.floor((consNum * preuNum / 100) * distTot);
-                const totalCotxesNum = carData.filter(c => c.driver).length;
-                const totalMembresNum = carData.reduce((acc, c) => acc + (c.driver ? 1 : 0) + c.passengers.length, 0);
+                const totalCotxesNum = carData.filter(c => c.driver && members.includes(c.driver)).length;
+                const totalMembresNum = carData.reduce((acc, c) => acc + (c.driver && members.includes(c.driver) ? 1 : 0) + (c.passengers ? c.passengers.filter(p => members.includes(p)).length : 0), 0);
                 const totalCostCotxesNum = costGasCotxe * totalCotxesNum;
                 const totalAportatNum = propNum * totalMembresNum;
                 const aportacioBatucadaNum = totalCostCotxesNum - totalAportatNum;
@@ -809,7 +806,7 @@
 
             const renderCarsTab = () => {
                 const totalAssignedToCars = carData.reduce((acc, car) => {
-                    return acc + (car.driver ? 1 : 0) + (car.passengers ? car.passengers.length : 0);
+                    return acc + (car.driver && members.includes(car.driver) ? 1 : 0) + (car.passengers ? car.passengers.filter(p => members.includes(p)).length : 0);
                 }, 0);
 
                 return (
@@ -937,10 +934,10 @@
             };
 
             const renderFoodTab = () => {
-                const totalFoodRequests = (foodData.standard?.length || 0) + 
-                                         (foodData.vegan?.length || 0) + 
-                                         (foodData.glutenFree?.length || 0) + 
-                                         (foodData.glutenFreeVegan?.length || 0);
+                const totalFoodRequests = (foodData.standard?.filter(p => members.includes(p)).length || 0) + 
+                                         (foodData.vegan?.filter(p => members.includes(p)).length || 0) + 
+                                         (foodData.glutenFree?.filter(p => members.includes(p)).length || 0) + 
+                                         (foodData.glutenFreeVegan?.filter(p => members.includes(p)).length || 0);
 
                 return (
                     <div className="flex-1 flex flex-row overflow-hidden">
@@ -972,6 +969,7 @@
                                 ].map(group => (
                                     <div key={group.id} onDragOver={e=>e.preventDefault()} onDrop={e => {
                                         const p = e.dataTransfer.getData("p");
+                                        if(!members.includes(p)) return;
                                         const newFD = { ...foodData };
                                         Object.keys(newFD).forEach(k => newFD[k] = (newFD[k] || []).filter(x => x !== p));
                                         newFD[group.id].push(p);
@@ -987,7 +985,7 @@
                                     className={`bg-white/60 p-6 rounded-3xl shadow-md border border-white/40 min-h-[160px] ${personToMove ? 'cursor-pointer hover:bg-purple-100/40' : ''}`}>
                                         <h4 className={`font-black uppercase italic mb-4 flex items-center gap-2 text-${group.color}-800`}><Icon name="utensils" size={18}/> {group.label}</h4>
                                         <div className="flex flex-wrap gap-2">
-                                            {(foodData[group.id] || []).map(p => (
+                                            {(foodData[group.id] || []).filter(p => members.includes(p)).map(p => (
                                                 <span key={p} onClick={(e) => { e.stopPropagation(); syncBoloData({ foodData: { ...foodData, [group.id]: foodData[group.id].filter(x => x !== p) } }); }}
                                                     className={`bg-${group.color}-100 text-${group.color}-900 px-3 py-1 rounded-full font-black text-sm md:text-xl cursor-pointer hover:bg-red-100`}>{p}</span>
                                             ))}
@@ -1073,9 +1071,9 @@
                 );
             }
 
-            const confirmedCount = Object.values(assignments).filter(v => v !== null).length;
-            const declinedCount = Object.values(attendance).filter(v => v === 'red').length;
-            const watchingCount = Object.values(attendance).filter(v => v === 'blue').length;
+            const confirmedCount = Object.keys(assignments).filter(p => members.includes(p) && assignments[p] !== null && assignments[p] !== undefined).length;
+            const declinedCount = Object.values(attendance).filter((v, i) => members.includes(Object.keys(attendance)[i]) && v === 'red').length;
+            const watchingCount = Object.values(attendance).filter((v, i) => members.includes(Object.keys(attendance)[i]) && v === 'blue').length;
             const pendingCount = members.length - confirmedCount - declinedCount - watchingCount;
 
             const isInfoDisabled = !isAdminAuth && !selectedBolo.info;
@@ -1267,21 +1265,145 @@
             </div>
         );
 
-        const ConfigModal = ({ settings, onUpdate, onClose }) => (
-            <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
-                    <h3 className="text-3xl font-black uppercase italic mb-6 text-blue-900">Ajustos</h3>
-                    <form onSubmit={onUpdate} className="space-y-4">
-                        <input name="userPass" defaultValue={settings.userPass} placeholder="User Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
-                        <input name="adminPass" defaultValue={settings.adminPass} placeholder="Admin Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
-                        <div className="flex gap-3 pt-4">
-                            <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase active:scale-95 transition-all">Tancar</button>
-                            <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-2xl uppercase active:scale-95 transition-all">Actualitzar</button>
+        const ConfigModal = ({ settings, onUpdate, onClose }) => {
+            const [isProcessing, setIsProcessing] = useState(false);
+
+            const handleExportBackup = async () => {
+                setIsProcessing(true);
+                try {
+                    const backupData = {
+                        config: settings,
+                        members: {},
+                        bolos: [],
+                        bolos_attendance: []
+                    };
+
+                    const membersSnap = await db.doc(`artifacts/${appId}/public/data/members_list/current`).get();
+                    if (membersSnap.exists) backupData.members = membersSnap.data();
+
+                    const bolosSnap = await db.collection(`artifacts/${appId}/public/data/bolos`).get();
+                    for (const doc of bolosSnap.docs) {
+                        backupData.bolos.push({ id: doc.id, data: doc.data() });
+                        const attDoc = await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${doc.id}`).get();
+                        if (attDoc.exists) {
+                            backupData.bolos_attendance.push({ id: doc.id, data: attDoc.data() });
+                        }
+                    }
+
+                    const jsonString = `data:text/json;charset=utf-8,${encodeURIComponent(JSON.stringify(backupData, null, 2))}`;
+                    const downloadAnchor = document.createElement('a');
+                    downloadAnchor.setAttribute("href", jsonString);
+                    const now = new Date().toISOString().slice(0, 10);
+                    downloadAnchor.setAttribute("download", `backup_tukats_${now}.json`);
+                    document.body.appendChild(downloadAnchor);
+                    downloadAnchor.click();
+                    downloadAnchor.remove();
+                } catch (e) {
+                    alert("Error generant el backup: " + e.message);
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+
+            const handleImportRestore = (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const confirmed = confirm("ATENCIÓ CRÍTICA: Estàs a punt de sobreescriure tota la base de dades actual amb les dades d'aquest backup. Estàs completament segur?");
+                if (!confirmed) {
+                    event.target.value = "";
+                    return;
+                }
+
+                setIsProcessing(true);
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+
+                        if (!importedData.config || !importedData.members || !importedData.bolos) {
+                            throw new Error("El fitxer de còpia de seguretat no té un format vàlid.");
+                        }
+
+                        await db.doc(`artifacts/${appId}/public/data/app_settings/config`).set(importedData.config);
+                        await db.doc(`artifacts/${appId}/public/data/members_list/current`).set(importedData.members);
+
+                        const currentBolos = await db.collection(`artifacts/${appId}/public/data/bolos`).get();
+                        const batch = db.batch();
+                        currentBolos.docs.forEach(doc => {
+                            batch.delete(db.doc(`artifacts/${appId}/public/data/bolos/${doc.id}`));
+                            batch.delete(db.doc(`artifacts/${appId}/public/data/bolos_attendance/${doc.id}`));
+                        });
+                        await batch.commit();
+
+                        for (const b of importedData.bolos) {
+                            await db.doc(`artifacts/${appId}/public/data/bolos/${b.id}`).set(b.data);
+                        }
+
+                        for (const att of importedData.bolos_attendance) {
+                            await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${att.id}`).set(att.data);
+                        }
+
+                        alert("Base de dades restaurada amb èxit totalment!");
+                        window.location.reload();
+                    } catch (err) {
+                        alert("Error restaurant el backup: " + err.message);
+                    } finally {
+                        setIsProcessing(false);
+                        event.target.value = "";
+                    }
+                };
+                reader.readAsText(file);
+            };
+
+            return (
+                <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl">
+                        <h3 className="text-3xl font-black uppercase italic mb-6 text-blue-900">Ajustos</h3>
+                        
+                        <form onSubmit={onUpdate} className="space-y-4">
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">CONTRASENYA USUARI</label>
+                                <input name="userPass" defaultValue={settings.userPass} placeholder="User Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">CONTRASENYA ADMIN</label>
+                                <input name="adminPass" defaultValue={settings.adminPass} placeholder="Admin Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                            </div>
+                            
+                            <div className="flex gap-3 pt-4">
+                                <button type="button" onClick={onClose} className="flex-1 py-4 bg-gray-200 text-gray-700 font-black rounded-2xl uppercase active:scale-95 transition-all">Tancar</button>
+                                <button type="submit" className="flex-1 py-4 bg-blue-600 text-white font-black rounded-2xl uppercase active:scale-95 transition-all">Actualitzar</button>
+                            </div>
+                        </form>
+
+                        <div className="mt-6 pt-6 border-t-2 border-gray-100 space-y-3">
+                            <h4 className="text-xs font-black uppercase text-gray-400 tracking-wider">Còpia de Seguretat</h4>
+                            
+                            <button 
+                                type="button" 
+                                disabled={isProcessing}
+                                onClick={handleExportBackup}
+                                className="w-full bg-amber-600 text-white font-black py-3 rounded-2xl hover:bg-amber-700 active:scale-95 transition-all uppercase text-sm tracking-wider flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
+                            >
+                                <Icon name="download" size={16}/> {isProcessing ? 'Processant...' : 'Generar Backup'}
+                            </button>
+
+                            <label className={`w-full bg-teal-600 text-white font-black py-3 rounded-2xl hover:bg-teal-700 active:scale-95 transition-all uppercase text-sm tracking-wider flex items-center justify-center gap-2 shadow-md cursor-pointer text-center ${isProcessing ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <Icon name="upload" size={16}/> Restaurar Còpia
+                                <input 
+                                    type="file" 
+                                    accept=".json" 
+                                    onChange={handleImportRestore} 
+                                    className="hidden" 
+                                    disabled={isProcessing}
+                                />
+                            </label>
                         </div>
-                    </form>
+                    </div>
                 </div>
-            </div>
-        );
+            );
+        };
 
         const root = ReactDOM.createRoot(document.getElementById('root'));
         root.render(<App />);
