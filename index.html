@@ -300,18 +300,43 @@
                 const unsubBolos = db.collection(`artifacts/${appId}/public/data/bolos`).onSnapshot(snap => {
                     const bolosList = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                     setBolos(bolosList);
-                    if (selectedBolo) {
-                        const updated = bolosList.find(d => d.id === selectedBolo.id);
-                        if (updated) setSelectedBolo(updated);
-                    }
                 });
 
                 return () => { unsubSettings(); unsubMembers(); unsubBolos(); };
-            }, [user, selectedBolo?.id]);
+            }, [user]);
 
             useEffect(() => {
-                if (!user || !selectedBolo) return;
+                if (selectedBolo) {
+                    const updated = bolos.find(d => d.id === selectedBolo.id);
+                    if (updated && JSON.stringify(updated) !== JSON.stringify(selectedBolo)) {
+                        setSelectedBolo(updated);
+                    }
+                }
+            }, [bolos, selectedBolo?.id]);
+
+            useEffect(() => {
+                if (!user) return;
+                
+                if (!selectedBolo) {
+                    // Si no hi ha cap bolo seleccionat, netegem completament l'estat d'assistència
+                    setAttendance({});
+                    setAssignments({});
+                    setCarData(Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })));
+                    setFoodData({ standard: [], vegan: [], glutenFree: [], glutenFreeVegan: [] });
+                    setBoloSettings({ carsEnabled: false, foodEnabled: false });
+                    setCarCosts({ enabled: false, distancia: "", consum: "6.5", preuLitre: "1.40", propuesta: "" });
+                    return;
+                }
+
                 setIsLoading(true);
+                
+                // Reiniciem l'estat immediatament en canviar de bolo per no heretar dades velles mentrestant es carrega
+                setAttendance({});
+                setAssignments({});
+                setCarData(Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })));
+                setFoodData({ standard: [], vegan: [], glutenFree: [], glutenFreeVegan: [] });
+                setBoloSettings({ carsEnabled: false, foodEnabled: false });
+                setCarCosts({ enabled: false, distancia: "", consum: "6.5", preuLitre: "1.40", propuesta: "" });
 
                 const unsub = db.doc(`artifacts/${appId}/public/data/bolos_attendance/${selectedBolo.id}`).onSnapshot(snap => {
                     if (snap.exists) {
@@ -333,7 +358,18 @@
                             preuLitre: cc.preuLitre !== undefined ? cc.preuLitre : "1.40",
                             propuesta: cc.proposta !== undefined ? cc.proposta : ""
                         });
+                    } else {
+                        // Si el document encara no s'ha creat (motius asíncrons), assegurem estats nets
+                        setAttendance({});
+                        setAssignments({});
+                        setCarData(Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })));
+                        setFoodData({ standard: [], vegan: [], glutenFree: [], glutenFreeVegan: [] });
+                        setBoloSettings({ carsEnabled: false, foodEnabled: false });
+                        setCarCosts({ enabled: false, distancia: "", consum: "6.5", preuLitre: "1.40", propuesta: "" });
                     }
+                    setIsLoading(false);
+                }, error => {
+                    console.error("Error carregant detalls assistència:", error);
                     setIsLoading(false);
                 });
                 return () => unsub();
@@ -442,11 +478,16 @@
                     if (editingBoloData) {
                         await db.doc(`artifacts/${appId}/public/data/bolos/${editingBoloData.id}`).update(data);
                     } else {
-                        const docRef = await db.collection(`artifacts/${appId}/public/data/bolos`).add({
+                        // Generem l'ID abans al client per guardar simultàniament ambdós documents
+                        const newBoloRef = db.collection(`artifacts/${appId}/public/data/bolos`).doc();
+                        const newBoloId = newBoloRef.id;
+
+                        await newBoloRef.set({
                             ...data, memberCount: 0, pendingCount: members.length, declinedCount: 0, watchingCount: 0,
                             info: "", carsEnabled: false, foodEnabled: false, precio: 0, googleMaps: "", tipoCobro: "FACTURA"
                         });
-                        await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${docRef.id}`).set({
+                        
+                        await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${newBoloId}`).set({
                             attendance: {}, assignments: {}, 
                             carData: Array.from({length: 8}, (_, i) => ({ id: i+1, driver: null, capacity: 4, passengers: [] })),
                             foodData: { standard: [], vegan: [], glutenFree: [], glutenFreeVegan: [] },
@@ -456,7 +497,7 @@
                     }
                     setShowBoloModal(false);
                     setEditingBoloData(null);
-                } catch (err) { console.error(err); }
+                } catch (err) { console.error("Error al desar el bolo:", err); }
             };
 
             const handleUpdateMembers = async (newList, removedName = null, newDisabledList = null) => {
@@ -729,7 +770,7 @@
                             <div className="flex justify-between items-center bg-amber-200/50 p-3 rounded-xl font-black text-amber-900 border border-amber-300 shadow-sm">
                                 <span>PROPOSTA per membre:</span>
                                 <div className="flex items-center gap-1.5">
-                                    {isAdminAuth ? <input type="number" step="0.5" value={carCosts.proposta} onChange={e => syncBoloData({ carCosts: { ...carCosts, propuesta: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-400 font-black" /> : <span className="font-black text-amber-900">{propNum.toFixed(1)}</span>}
+                                    {isAdminAuth ? <input type="number" step="0.5" value={carCosts.propuesta} onChange={e => syncBoloData({ carCosts: { ...carCosts, propuesta: e.target.value } })} className="w-16 md:w-20 p-1.5 text-right bg-white rounded-lg border border-amber-400 font-black" /> : <span className="font-black text-amber-900">{propNum.toFixed(1)}</span>}
                                     <span className="font-black">€</span>
                                 </div>
                             </div>
@@ -766,7 +807,7 @@
                     <div key={b.id} onClick={() => { setSelectedBolo(b); setActiveTab('instruments'); }} 
                          className={`p-4 ${bgClass} rounded-3xl flex flex-col gap-2 shadow-md border-2 border-transparent transition-all cursor-pointer relative group mt-4 mb-2 ${pasado ? 'opacity-50 grayscale-[20%]' : ''}`}>
                         
-                        <WeatherBadge lugar={b.lugar} fecha={b.fecha} hora={b.hora} />
+                        <WeatherBadge lugar={b.lugar} fill-date={b.fecha} fecha={b.fecha} hora={b.hora} />
 
                         <div className={`absolute -top-4 right-0 md:-right-2 w-14 h-14 md:w-16 md:h-16 rounded-xl flex flex-col items-center justify-center date-tab z-20 ${pasado ? 'bg-gray-500 text-white' : 'bg-[#DCF23A] text-black border border-black/5'}`}>
                             <span className="text-[9px] md:text-[11px] font-black uppercase leading-none mb-0.5 opacity-80">{weekday}</span>
