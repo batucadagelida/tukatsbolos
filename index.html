@@ -438,7 +438,7 @@
                     } else {
                         const docRef = await db.collection(`artifacts/${appId}/public/data/bolos`).add({
                             ...data, memberCount: 0, pendingCount: members.length, declinedCount: 0, watchingCount: 0,
-                            info: "", carsEnabled: false, foodEnabled: false, precio: 0, googleMaps: "", tipoCobro: "FACTURA"
+                            info: "", carsEnabled: false, foodEnabled: false, precio: 0, googleMaps: "", tipoCobro: "FACTURA", estado: "Proposat"
                         });
                         await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${docRef.id}`).set({
                             attendance: {}, assignments: {}, 
@@ -621,6 +621,21 @@
                                             <option value="DONACIÓ">DONACIÓ</option>
                                         </select>
                                     </div>
+                                    <div className="w-full md:w-48">
+                                        <label className="block text-xs font-black uppercase opacity-60 mb-2">ESTAT DEL BOLO</label>
+                                        <select 
+                                            className="w-full p-4 bg-white rounded-2xl font-black text-lg text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner cursor-pointer"
+                                            defaultValue={selectedBolo.estado || "Proposat"}
+                                            onChange={async (e) => {
+                                                const newVal = e.target.value;
+                                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ estado: newVal });
+                                            }}
+                                        >
+                                            <option value="Proposat">Proposat</option>
+                                            <option value="Confirmat">Confirmat</option>
+                                            <option value="Cancel·lat">Cancel·lat</option>
+                                        </select>
+                                    </div>
                                 </div>
                             </div>
 
@@ -751,11 +766,16 @@
                 const precio = b.precio || 0;
                 const tipoCobro = b.tipoCobro || "FACTURA";
                 
+                let bgClass = "bg-white/70";
+                if (b.estado === "Confirmat") bgClass = "bg-green-100";
+                else if (b.estado === "Proposat") bgClass = "bg-blue-100";
+                else if (b.estado === "Cancel·lat") bgClass = "bg-pink-100";
+                
                 const priceBadgeColorClass = (pasado) ? "bg-gray-400 text-white" : (tipoCobro === "DONACIÓ") ? "bg-black text-[#DCF23A]" : "bg-[#DCF23A] text-black";
 
                 return (
                     <div key={b.id} onClick={() => { setSelectedBolo(b); setActiveTab('instruments'); }} 
-                         className={`p-4 bg-white/70 rounded-3xl flex flex-col gap-2 shadow-md hover:border-green-500 border-2 border-transparent transition-all cursor-pointer relative group mt-4 mb-2 ${pasado ? 'opacity-50 grayscale-[20%]' : ''}`}>
+                         className={`p-4 ${bgClass} rounded-3xl flex flex-col gap-2 shadow-md hover:border-green-500 border-2 border-transparent transition-all cursor-pointer relative group mt-4 mb-2 ${pasado ? 'opacity-50 grayscale-[20%]' : ''}`}>
                         
                         <WeatherBadge lugar={b.lugar} fecha={b.fecha} hora={b.hora} />
 
@@ -795,9 +815,9 @@
                                 <div className="flex-1 bg-blue-100 text-blue-800 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1"><Icon name="eye" size={15}/> {b.watchingCount || 0}</div>
                             </div>
                             <div className="flex gap-1 w-full">
-                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${hasInfo ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-600/5 text-blue-900/10'}`}><Icon name="info" size={15}/> INFO</div>
-                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${b.carsEnabled ? 'bg-amber-800 text-white shadow-md' : 'bg-amber-800/5 text-amber-900/10'}`}><Icon name="car" size={15}/> COTXES</div>
-                                <div className={`flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${b.foodEnabled ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-600/5 text-purple-900/10'}`}><Icon name="utensils" size={15}/> MENJAR</div>
+                                <div className="flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${hasInfo ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-600/5 text-blue-900/10'}`}><Icon name="info" size={15}/> INFO</div>
+                                <div className="flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${b.carsEnabled ? 'bg-amber-800 text-white shadow-md' : 'bg-amber-800/5 text-amber-900/10'}`}><Icon name="car" size={15}/> COTXES</div>
+                                <div className="flex-1 p-1 md:p-1.5 rounded-xl text-center font-black text-[13px] uppercase flex items-center justify-center gap-1 transition-all ${b.foodEnabled ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-600/5 text-purple-900/10'}`}><Icon name="utensils" size={15}/> MENJAR</div>
                             </div>
                         </div>
                     </div>
