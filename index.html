@@ -532,7 +532,7 @@
             };
 
             const enviarRecordatorioWhatsApp = (tituloBolo, pendientesArray) => {
-                const lista = pendientesArray.length > 0 ? pendientesArray.map(p => ` - ${p}`).join('\n') : ' - ENHORABONA ningú pendent!';
+                const lista = pendientesArray.length > 0 ? pendientesArray.map(p => ` *- ${p}*`).join('\n') : ' *- ENHORABONA ningú pendent!*';
                 const appLink = window.location.origin + window.location.pathname;
                 const texto = `_App TukatsBolos_\n\n` +
                               `🥁 Recordatori bolo:\n*${tituloBolo}*\n\n` +
