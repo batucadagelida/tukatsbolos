@@ -532,13 +532,11 @@
             };
 
             const enviarRecordatorioWhatsApp = (tituloBolo, pendientesArray) => {
-                const lista = pendientesArray.length > 0 ? pendientesArray.map(p => ` - ${p}`).join('\n') : ' - Ningú pendent!';
+                const lista = pendientesArray.length > 0 ? pendientesArray.map(p => ` - ${p}`).join('\n') : ' - ENHORABONA ningú pendent!';
                 const appLink = window.location.origin + window.location.pathname;
-                const texto = `🥁 *Recordatori bolo: ${tituloBolo}*\n\n` +
-                              `⚠️ *Pendents que falten per respondre:*\n${lista}\n\n` +
-                              `Si teniu dubte, poseu *No puc* i si més endavant podeu, ja canviareu.\n` +
-                              `En el cas de bolos amb menjar, com més tard us apunteu més dificil serà gestionar que en tingueu.\n\n` +
-                              `👉 Entrad a confirmar aquí: ${appLink}`;
+                const texto = `_App TukatsBolos_\n\n` +
+                              `🥁 Recordatori bolo:\n*${tituloBolo}*\n\n` +
+                              `⚠️ Pendents de respondre:\n*${lista}*\n\n`;
 
                 const groupOrPhone = settings.whatsappGroup ? settings.whatsappGroup.trim() : 'DpXWxl9PqBzLCvSSYqVJGz';
                 
