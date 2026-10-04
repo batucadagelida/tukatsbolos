@@ -124,6 +124,7 @@
                 'chevron-down': <polyline points="6 9 12 15 18 9" stroke="currentColor" fill="none" />,
                 download: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" fill="none"/></>,
                 upload: <><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" fill="none"/></>,
+                whatsapp: <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" stroke="currentColor" fill="none"/>,
                 
                 sun: <circle cx="12" cy="12" r="7" fill={sunColor} />,
                 cloud: <path d="M17.5 19c2.5 0 4.5-2 4.5-4.5 0-2.3-1.7-4.2-3.9-4.5-1-4.1-4.6-7-8.9-7-3.6 0-6.7 2-8.1 4.9C1.1 12.1 3 14 3 14.5c0 2.5 2 4.5 4.5 4.5h10Z" fill={cloudColor} />,
@@ -254,7 +255,7 @@
             const [boloSettings, setBoloSettings] = useState({ carsEnabled: false, foodEnabled: false });
             const [carCosts, setCarCosts] = useState({ enabled: false, distancia: "", consum: "6.5", preuLitre: "1.40", propuesta: "" });
             
-            const [settings, setSettings] = useState({ userPass: "TUKATS", adminPass: "ADMIN" });
+            const [settings, setSettings] = useState({ userPass: "TUKATS", adminPass: "ADMIN", whatsappGroup: "DpXWxl9PqBzLCvSSYqVJGz" });
             const [isLoading, setIsLoading] = useState(true);
             const [personToMove, setPersonToMove] = useState(null);
 
@@ -404,8 +405,10 @@
                 e.preventDefault();
                 const formData = new FormData(e.target);
                 const newSettings = {
+                    ...settings,
                     userPass: formData.get('userPass'),
-                    adminPass: formData.get('adminPass')
+                    adminPass: formData.get('adminPass'),
+                    whatsappGroup: formData.get('whatsappGroup')
                 };
                 try {
                     await db.doc(`artifacts/${appId}/public/data/app_settings/config`).set(newSettings);
@@ -415,7 +418,7 @@
 
             const handleDeleteBolo = async (id, e) => {
                 e.stopPropagation();
-                if (!confirm("Segur que vols eliminar aquest bolo?")) return;
+                if (!window.confirm("Segur que vols eliminar aquest bolo?")) return;
                 try {
                     await db.doc(`artifacts/${appId}/public/data/bolos/${id}`).delete();
                     await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${id}`).delete();
@@ -528,6 +531,25 @@
                 setPersonToMove(null);
             };
 
+            const enviarRecordatorioWhatsApp = (tituloBolo, pendientesArray) => {
+                const lista = pendientesArray.length > 0 ? pendientesArray.map(p => ` - ${p}`).join('\n') : ' - Ningú pendent!';
+                const appLink = window.location.origin + window.location.pathname;
+                const texto = `🥁 *Recordatori bolo: ${tituloBolo}*\n\n` +
+                              `⚠️ *Pendents que falten per respondre:*\n${lista}\n\n` +
+                              `Si teniu dubte, poseu *No puc* i si més endavant podeu, ja canviareu.\n` +
+                              `En el cas de bolos amb menjar, com més tard us apunteu més dificil serà gestionar que en tingueu.\n\n` +
+                              `👉 Entrad a confirmar aquí: ${appLink}`;
+
+                const groupNumber = settings.whatsappGroup ? settings.whatsappGroup.trim() : 'DpXWxl9PqBzLCvSSYqVJGz';
+                let url = '';
+                if (groupNumber) {
+                    url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(groupNumber)}&text=${encodeURIComponent(texto)}`;
+                } else {
+                    url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+                }
+                window.open(url, '_blank');
+            };
+
             const renderInstrumentsTab = () => (
                 <div className="flex-1 flex flex-row overflow-hidden">
                     <aside className="w-[110px] md:w-80 bg-white/20 border-r-2 border-white/30 p-2 flex flex-col shrink-0 overflow-y-auto custom-scrollbar">
@@ -570,113 +592,145 @@
                 </div>
             );
 
-            const renderInfoTab = () => (
-                <div className="flex-1 p-4 md:p-8 flex flex-col overflow-hidden">
-                    <h3 className="text-2xl font-black uppercase italic mb-4">Informació Extra</h3>
-                    
-                    {!isAdminAuth && selectedBolo.googleMaps && (
-                        <a 
-                            href={selectedBolo.googleMaps} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center gap-3 bg-white/80 p-4 rounded-2xl mb-6 shadow-md border-2 border-green-500/20 hover:bg-white active:scale-95 transition-all text-green-800"
-                        >
-                            <div className="bg-green-100 p-3 rounded-xl">
-                                <Icon name="map-pin" size={24} className="text-green-700" />
-                            </div>
-                            <span className="text-xl font-black uppercase italic">Ubicació</span>
-                        </a>
-                    )}
+            const renderInfoTab = () => {
+                const pendingMembersList = members.filter(p => !assignments[p] && !['red', 'blue'].includes(attendance[p]));
 
-                    {isAdminAuth && (
-                        <div className="space-y-4 mb-4">
-                            <div className="bg-white/50 p-4 rounded-3xl border-2 border-dashed border-green-600/30">
-                                <div className="flex flex-col md:flex-row gap-4">
-                                    <div className="flex-1">
-                                        <label className="block text-xs font-black uppercase opacity-60 mb-2">VALOR DEL BOLO (€) - Només Admin</label>
-                                        <div className="flex items-center gap-4">
-                                            <input 
-                                                type="number" 
-                                                className="w-1/2 md:flex-1 p-4 bg-white rounded-2xl font-black text-2xl text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner"
-                                                defaultValue={selectedBolo.precio || 0}
-                                                onBlur={async (e) => {
-                                                    const newVal = parseInt(e.target.value) || 0;
-                                                    await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ precio: newVal });
-                                                }}
-                                            />
-                                            <span className="text-2xl font-black text-green-900">€</span>
-                                        </div>
-                                    </div>
-                                    <div className="w-full md:w-48">
-                                        <label className="block text-xs font-black uppercase opacity-60 mb-2">TIPUS COBRO</label>
-                                        <select 
-                                            className="w-full p-4 bg-white rounded-2xl font-black text-lg text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner cursor-pointer"
-                                            defaultValue={selectedBolo.tipoCobro || "FACTURA"}
-                                            onChange={async (e) => {
-                                                const newVal = e.target.value;
-                                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ tipoCobro: newVal });
-                                            }}
-                                        >
-                                            <option value="FACTURA">FACTURA</option>
-                                            <option value="DONACIÓ">DONACIÓ</option>
-                                        </select>
-                                    </div>
-                                    <div className="w-full md:w-48">
-                                        <label className="block text-xs font-black uppercase opacity-60 mb-2">ESTAT DEL BOLO</label>
-                                        <select 
-                                            className="w-full p-4 bg-white rounded-2xl font-black text-lg text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner cursor-pointer"
-                                            defaultValue={selectedBolo.estado || "Confirmat"}
-                                            onChange={async (e) => {
-                                                const newVal = e.target.value;
-                                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ estado: newVal });
-                                            }}
-                                        >
-                                            <option value="Proposat">Proposat</option>
-                                            <option value="Confirmat">Confirmat</option>
-                                            <option value="Assaig">Assaig</option>
-                                            <option value="Cancel·lat">Cancel·lat</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="bg-white/50 p-4 rounded-3xl border-2 border-dashed border-blue-600/30">
-                                <label className="block text-xs font-black uppercase opacity-60 mb-2">ENLLAÇ GOOGLE MAPS - Només Admin</label>
-                                <div className="flex items-center gap-4">
-                                    <div className="bg-blue-100 p-3 rounded-xl shrink-0">
-                                        <Icon name="map-pin" size={20} className="text-blue-700" />
+                return (
+                    <div className="flex-1 p-4 md:p-8 flex flex-col overflow-y-auto custom-scrollbar">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                            <h3 className="text-2xl font-black uppercase italic">Informació Extra</h3>
+                            
+                            {isAdminAuth && (
+                                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-white/60 p-3 rounded-2xl border border-white/40">
+                                    <div className="flex items-center gap-2">
+                                        <Icon name="whatsapp" size={18} className="text-emerald-600" />
+                                        <span className="text-xs font-black uppercase text-emerald-900">Grup / Tel WhatsApp:</span>
                                     </div>
                                     <input 
                                         type="text" 
-                                        placeholder="Enganxa aquí l'enllaç de Google Maps..."
-                                        className="flex-1 p-4 bg-white rounded-2xl font-bold text-sm text-blue-900 outline-none focus:ring-2 ring-blue-500 shadow-inner"
-                                        defaultValue={selectedBolo.googleMaps || ""}
+                                        placeholder="Ex: DpXWxl9PqBzLCvSSYqVJGz" 
+                                        className="p-2 bg-white rounded-xl text-xs font-bold text-emerald-950 border border-emerald-200 outline-none w-full sm:w-48"
+                                        defaultValue={settings.whatsappGroup || "DpXWxl9PqBzLCvSSYqVJGz"}
                                         onBlur={async (e) => {
                                             const newVal = e.target.value;
-                                            await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ googleMaps: newVal });
+                                            const updatedSettings = { ...settings, whatsappGroup: newVal };
+                                            await db.doc(`artifacts/${appId}/public/data/app_settings/config`).set(updatedSettings);
                                         }}
                                     />
+                                    <button 
+                                        onClick={() => enviarRecordatorioWhatsApp(selectedBolo.nombre, pendingMembersList)}
+                                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl font-black text-xs uppercase flex items-center justify-center gap-2 shadow-md active:scale-95 transition-all shrink-0"
+                                    >
+                                        <Icon name="whatsapp" size={16} /> Recordatori WhatsApp
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                        
+                        {!isAdminAuth && selectedBolo.googleMaps && (
+                            <a 
+                                href={selectedBolo.googleMaps} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="flex items-center gap-3 bg-white/80 p-4 rounded-2xl mb-6 shadow-md border-2 border-green-500/20 hover:bg-white active:scale-95 transition-all text-green-800"
+                            >
+                                <div className="bg-green-100 p-3 rounded-xl">
+                                    <Icon name="map-pin" size={24} className="text-green-700" />
+                                </div>
+                                <span className="text-xl font-black uppercase italic">Ubicació</span>
+                            </a>
+                        )}
+
+                        {isAdminAuth && (
+                            <div className="space-y-4 mb-4">
+                                <div className="bg-white/50 p-4 rounded-3xl border-2 border-dashed border-green-600/30">
+                                    <div className="flex flex-col md:flex-row gap-4">
+                                        <div className="flex-1">
+                                            <label className="block text-xs font-black uppercase opacity-60 mb-2">VALOR DEL BOLO (€) - Només Admin</label>
+                                            <div className="flex items-center gap-4">
+                                                <input 
+                                                    type="number" 
+                                                    className="w-1/2 md:flex-1 p-4 bg-white rounded-2xl font-black text-2xl text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner"
+                                                    defaultValue={selectedBolo.precio || 0}
+                                                    onBlur={async (e) => {
+                                                        const newVal = parseInt(e.target.value) || 0;
+                                                        await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ precio: newVal });
+                                                    }}
+                                                />
+                                                <span className="text-2xl font-black text-green-900">€</span>
+                                            </div>
+                                        </div>
+                                        <div className="w-full md:w-48">
+                                            <label className="block text-xs font-black uppercase opacity-60 mb-2">TIPUS COBRO</label>
+                                            <select 
+                                                className="w-full p-4 bg-white rounded-2xl font-black text-lg text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner cursor-pointer"
+                                                defaultValue={selectedBolo.tipoCobro || "FACTURA"}
+                                                onChange={async (e) => {
+                                                    const newVal = e.target.value;
+                                                    await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ tipoCobro: newVal });
+                                                }}
+                                            >
+                                                <option value="FACTURA">FACTURA</option>
+                                                <option value="DONACIÓ">DONACIÓ</option>
+                                            </select>
+                                        </div>
+                                        <div className="w-full md:w-48">
+                                            <label className="block text-xs font-black uppercase opacity-60 mb-2">ESTAT DEL BOLO</label>
+                                            <select 
+                                                className="w-full p-4 bg-white rounded-2xl font-black text-lg text-green-700 outline-none focus:ring-2 ring-green-500 shadow-inner cursor-pointer"
+                                                defaultValue={selectedBolo.estado || "Confirmat"}
+                                                onChange={async (e) => {
+                                                    const newVal = e.target.value;
+                                                    await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ estado: newVal });
+                                                }}
+                                            >
+                                                <option value="Proposat">Proposat</option>
+                                                <option value="Confirmat">Confirmat</option>
+                                                <option value="Assaig">Assaig</option>
+                                                <option value="Cancel·lat">Cancel·lat</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="bg-white/50 p-4 rounded-3xl border-2 border-dashed border-blue-600/30">
+                                    <label className="block text-xs font-black uppercase opacity-60 mb-2">ENLLAÇ GOOGLE MAPS - Només Admin</label>
+                                    <div className="flex items-center gap-4">
+                                        <div className="bg-blue-100 p-3 rounded-xl shrink-0">
+                                            <Icon name="map-pin" size={20} className="text-blue-700" />
+                                        </div>
+                                        <input 
+                                            type="text" 
+                                            placeholder="Enganxa aquí l'enllaç de Google Maps..."
+                                            className="flex-1 p-4 bg-white rounded-2xl font-bold text-sm text-blue-900 outline-none focus:ring-2 ring-blue-500 shadow-inner"
+                                            defaultValue={selectedBolo.googleMaps || ""}
+                                            onBlur={async (e) => {
+                                                const newVal = e.target.value;
+                                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ googleMaps: newVal });
+                                            }}
+                                        />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    )}
+                        )}
 
-                    {isAdminAuth ? (
-                        <textarea className="flex-1 w-full p-6 bg-white/70 rounded-3xl border-2 border-transparent focus:border-blue-500 outline-none font-bold text-lg md:text-xl resize-none shadow-xl mb-12"
-                            placeholder="Afegeix aquí informació sobre el bolo..."
-                            defaultValue={selectedBolo.info}
-                            onBlur={async (e) => {
-                                const newVal = e.target.value;
-                                await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ info: newVal });
-                                setSelectedBolo({...selectedBolo, info: newVal});
-                            }} />
-                    ) : (
-                        <div className="flex-1 p-6 bg-white/70 rounded-3xl font-bold text-lg md:text-xl whitespace-pre-wrap shadow-xl overflow-y-auto custom-scrollbar pb-24">
-                            {selectedBolo.info || "No hi ha informació addicional disponible."}
-                        </div>
-                    )}
-                </div>
-            );
+                        {isAdminAuth ? (
+                            <textarea className="flex-1 min-h-[200px] w-full p-6 bg-white/70 rounded-3xl border-2 border-transparent focus:border-blue-500 outline-none font-bold text-lg md:text-xl resize-none shadow-xl mb-12"
+                                placeholder="Afegeix aquí informació sobre el bolo..."
+                                defaultValue={selectedBolo.info}
+                                onBlur={async (e) => {
+                                    const newVal = e.target.value;
+                                    await db.doc(`artifacts/${appId}/public/data/bolos/${selectedBolo.id}`).update({ info: newVal });
+                                    setSelectedBolo({...selectedBolo, info: newVal});
+                                }} />
+                        ) : (
+                            <div className="flex-1 min-h-[200px] p-6 bg-white/70 rounded-3xl font-bold text-lg md:text-xl whitespace-pre-wrap shadow-xl overflow-y-auto custom-scrollbar pb-24">
+                                {selectedBolo.info || "No hi ha informació addicional disponible."}
+                            </div>
+                        )}
+                    </div>
+                );
+            };
 
             const renderCarCostsTable = () => {
                 if (!isAdminAuth && !carCosts.enabled) return null;
@@ -971,9 +1025,9 @@
 
             const renderFoodTab = () => {
                 const totalFoodRequests = (foodData.standard?.filter(p => members.includes(p)).length || 0) + 
-                                         (foodData.vegan?.filter(p => members.includes(p)).length || 0) + 
-                                         (foodData.glutenFree?.filter(p => members.includes(p)).length || 0) + 
-                                         (foodData.glutenFreeVegan?.filter(p => members.includes(p)).length || 0);
+                                       (foodData.vegan?.filter(p => members.includes(p)).length || 0) + 
+                                       (foodData.glutenFree?.filter(p => members.includes(p)).length || 0) + 
+                                       (foodData.glutenFreeVegan?.filter(p => members.includes(p)).length || 0);
 
                 return (
                     <div className="flex-1 flex flex-row overflow-hidden">
@@ -1209,7 +1263,7 @@
                                             <span className="font-bold text-lg">{name}</span>
                                             <div className="flex items-center gap-1">
                                                 <button onClick={() => { 
-                                                    if (confirm(`Vols deshabilitar a ${name}?`)) {
+                                                    if (window.confirm(`Vols deshabilitar a ${name}?`)) {
                                                         const newMembers = members.filter(n => n !== name);
                                                         const newDisabled = [...disabledMembers, name].sort();
                                                         onUpdate(newMembers, name, newDisabled);
@@ -1217,7 +1271,7 @@
                                                 }} className="text-orange-600 font-black text-xs uppercase px-2.5 py-1.5 hover:bg-orange-50 rounded-xl border border-orange-200 transition-colors">
                                                     Deshabilitar
                                                 </button>
-                                                <button onClick={() => { if (confirm(`Baixa de ${name}?`)) onUpdate(members.filter(n => n !== name), name); }} className="text-red-500 p-2 hover:bg-red-50 rounded-xl">
+                                                <button onClick={() => { if (window.confirm(`Baixa de ${name}?`)) onUpdate(members.filter(n => n !== name), name); }} className="text-red-500 p-2 hover:bg-red-50 rounded-xl">
                                                     <Icon name="trash" size={18}/>
                                                 </button>
                                             </div>
@@ -1242,7 +1296,7 @@
                                                     Habilitar
                                                 </button>
                                                 <button onClick={() => { 
-                                                    if (confirm(`Vols eliminar definitivament a ${name}?`)) {
+                                                    if (window.confirm(`Vols eliminar definitivament a ${name}?`)) {
                                                         const newDisabled = disabledMembers.filter(n => n !== name);
                                                         onUpdate(members, null, newDisabled);
                                                     }
@@ -1335,7 +1389,7 @@
                     downloadAnchor.click();
                     downloadAnchor.remove();
                 } catch (e) {
-                    alert("Error generant el backup: " + e.message);
+                    window.alert("Error generant el backup: " + e.message);
                 } finally {
                     setIsProcessing(false);
                 }
@@ -1345,7 +1399,7 @@
                 const file = event.target.files[0];
                 if (!file) return;
 
-                const confirmed = confirm("ATENCIÓ CRÍTICA: Estàs a punt de sobreescriure tota la base de dades actual amb les dades d'aquest backup. Estàs completament segur?");
+                const confirmed = window.confirm("ATENCIÓ CRÍTICA: Estàs a punt de sobreescriure tota la base de dades actual amb les dades d'aquest backup. Estàs completament segur?");
                 if (!confirmed) {
                     event.target.value = "";
                     return;
@@ -1380,10 +1434,10 @@
                             await db.doc(`artifacts/${appId}/public/data/bolos_attendance/${att.id}`).set(att.data);
                         }
 
-                        alert("Base de dades restaurada amb èxit totalment!");
+                        window.alert("Base de dades restaurada amb èxit totalment!");
                         window.location.reload();
                     } catch (err) {
-                        alert("Error restaurant el backup: " + err.message);
+                        window.alert("Error restaurant el backup: " + err.message);
                     } finally {
                         setIsProcessing(false);
                         event.target.value = "";
@@ -1394,7 +1448,7 @@
 
             return (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                    <div className="bg-white w-full max-sm rounded-[2.5rem] p-8 shadow-2xl">
+                    <div className="bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
                         <h3 className="text-3xl font-black uppercase italic mb-6 text-blue-900">Ajustos</h3>
                         
                         <form onSubmit={onUpdate} className="space-y-4">
@@ -1405,6 +1459,10 @@
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase opacity-50 ml-2">CONTRASENYA ADMIN</label>
                                 <input name="adminPass" defaultValue={settings.adminPass} placeholder="Admin Pass" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" required />
+                            </div>
+                            <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase opacity-50 ml-2">GRUP / TELÈFON WHATSAPP PER DEFECTE</label>
+                                <input name="whatsappGroup" defaultValue={settings.whatsappGroup || "DpXWxl9PqBzLCvSSYqVJGz"} placeholder="Ex: DpXWxl9PqBzLCvSSYqVJGz" className="w-full p-4 bg-gray-100 rounded-2xl font-bold outline-none" />
                             </div>
                             
                             <div className="flex gap-3 pt-4">
