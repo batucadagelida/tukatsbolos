@@ -2,7 +2,7 @@
 <html lang="ca">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tukats - Gestió de Batucada</title>
     
     <script src="https://cdn.tailwindcss.com"></script>
@@ -540,14 +540,51 @@
                               `En el cas de bolos amb menjar, com més tard us apunteu més dificil serà gestionar que en tingueu.\n\n` +
                               `👉 Entrad a confirmar aquí: ${appLink}`;
 
-                const groupNumber = settings.whatsappGroup ? settings.whatsappGroup.trim() : 'DpXWxl9PqBzLCvSSYqVJGz';
-                let url = '';
-                if (groupNumber) {
-                    url = `https://wa.me/${encodeURIComponent(groupNumber)}?text=${encodeURIComponent(texto)}`;
+                const groupOrPhone = settings.whatsappGroup ? settings.whatsappGroup.trim() : 'DpXWxl9PqBzLCvSSYqVJGz';
+                
+                // Comprovem si és un telèfon (només conté números, espais o signe +)
+                const isPhoneNumber = /^[+0-9\s]+$/.test(groupOrPhone);
+
+                if (isPhoneNumber) {
+                    // Si és telèfon, l'API obre el xat directament amb el text
+                    const phoneStr = groupOrPhone.replace(/\s/g, '');
+                    window.open(`https://wa.me/${phoneStr}?text=${encodeURIComponent(texto)}`, '_blank');
+                } else if (groupOrPhone) {
+                    // Si és un ID de grup, l'API wa.me dóna error i chat.whatsapp.com no admet "?text="
+                    // Solució: Copiem al porta-retalls i obrim l'enllaç del grup.
+                    try {
+                        // Crear textarea invisible per copiar el text (mètode més compatible en iframes)
+                        const textArea = document.createElement("textarea");
+                        textArea.value = texto;
+                        // Evita scroll cap a sota
+                        textArea.style.top = "0";
+                        textArea.style.left = "0";
+                        textArea.style.position = "fixed";
+                        document.body.appendChild(textArea);
+                        textArea.focus();
+                        textArea.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(textArea);
+
+                        // Crear un petit avís visual de que s'ha copiat (sense bloquejar amb alert)
+                        const toast = document.createElement("div");
+                        toast.innerHTML = "📝 Missatge copiat! Ara s'obrirà el grup, només has d'enganxar-lo.";
+                        toast.style.cssText = "position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;padding:12px 24px;border-radius:12px;font-weight:900;z-index:9999;box-shadow:0 10px 15px -3px rgba(0,0,0,0.1);text-align:center;";
+                        document.body.appendChild(toast);
+                        
+                        // Eliminar toast després de 4 segons
+                        setTimeout(() => { if (document.body.contains(toast)) document.body.removeChild(toast); }, 4000);
+
+                        // Obrir el grup de WhatsApp
+                        window.open(`https://chat.whatsapp.com/${groupOrPhone}`, '_blank');
+                    } catch (err) {
+                        // Fallback segur si el porta-retalls falla: usar l'api general de compartir
+                        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
+                    }
                 } else {
-                    url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
+                    // Si no hi ha cap número/ID configurat, fer servir l'api general per escollir a qui enviar-ho
+                    window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`, '_blank');
                 }
-                window.open(url, '_blank');
             };
 
             const renderInstrumentsTab = () => (
