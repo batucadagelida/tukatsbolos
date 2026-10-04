@@ -543,7 +543,7 @@
                 const groupNumber = settings.whatsappGroup ? settings.whatsappGroup.trim() : 'DpXWxl9PqBzLCvSSYqVJGz';
                 let url = '';
                 if (groupNumber) {
-                    url = `https://api.whatsapp.com/send?phone=${encodeURIComponent(groupNumber)}&text=${encodeURIComponent(texto)}`;
+                    url = `https://wa.me/${encodeURIComponent(groupNumber)}?text=${encodeURIComponent(texto)}`;
                 } else {
                     url = `https://api.whatsapp.com/send?text=${encodeURIComponent(texto)}`;
                 }
